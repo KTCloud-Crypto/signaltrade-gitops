@@ -1,0 +1,14 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata: {name: signaltrade-observability-staging, namespace: argocd}
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/KTCloud-Crypto/signaltrade-gitops.git
+    targetRevision: develop
+    path: addons/monitoring
+    helm:
+      parameters: [{name: namespace, value: signaltrade-staging}]
+  destination: {server: https://kubernetes.default.svc, namespace: signaltrade-staging}
+  syncPolicy:
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]

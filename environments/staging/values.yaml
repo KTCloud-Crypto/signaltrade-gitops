@@ -1,0 +1,19 @@
+global:
+  environment: staging
+  namespace: signaltrade-staging
+secret:
+  commonKey: signaltrade/staging/common
+
+# 서비스 CI가 검증된 immutable tag 또는 digest를 이곳에 반영합니다.
+apis:
+  identity: {tag: replace-with-git-sha, replicas: 2}
+  strategy: {tag: replace-with-git-sha, replicas: 2}
+  trading: {tag: replace-with-git-sha, replicas: 2}
+  portfolio: {tag: replace-with-git-sha, replicas: 2}
+workers:
+  messaging: {tag: replace-with-git-sha, replicas: 1}
+  strategy: {tag: replace-with-git-sha, replicas: 1}
+  trading: {tag: replace-with-git-sha, replicas: 1}
+  portfolio: {tag: replace-with-git-sha, replicas: 1}
+  notification: {tag: replace-with-git-sha, replicas: 1}
+migration: {tag: replace-with-git-sha}

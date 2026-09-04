@@ -1,5 +1,116 @@
 global:
-  environment: develop
+  environment: staging
+  namespace: signaltrade-staging
+  awsRegion: us-east-1
+  imageRegistry: 832496385575.dkr.ecr.us-east-1.amazonaws.com/signaltrade
+  imagePullPolicy: IfNotPresent
+  commonEnv:
+    ENVIRONMENT: staging
+    AWS_REGION: us-east-1
+    SQS_TRADING_COMMAND_QUEUE_NAME: signaltrade-trading-commands
+    SQS_STRATEGY_COMMAND_QUEUE_NAME: signaltrade-strategy-commands
+    SQS_NOTIFICATION_QUEUE_NAME: signaltrade-notifications
+    IDENTITY_SERVICE_URL: http://identity-api:8000
+    STRATEGY_SERVICE_URL: http://strategy-api:8000
+    TRADING_SERVICE_URL: http://trading-api:8000
+    PORTFOLIO_SERVICE_URL: http://portfolio-api:8000
 
-# 서비스별 image, replica, resource, ingress 값은
-# 기존 EKS 구성을 분석한 뒤 이 Chart의 기본값으로 추가합니다.
+secret:
+  storeName: signaltrade-secrets-manager
+  commonKey: signaltrade/staging/common
+  serviceKeys:
+    identity: signaltrade/staging/identity
+    strategy: signaltrade/staging/strategy
+    trading: signaltrade/staging/trading
+    portfolio: signaltrade/staging/portfolio
+    messaging: signaltrade/staging/messaging
+    notification: signaltrade/staging/notification
+  refreshInterval: 1h
+
+apis:
+  identity:
+    image: identity
+    tag: replace-with-git-sha
+    replicas: 2
+    serviceAccount: identity
+  strategy:
+    image: strategy
+    tag: replace-with-git-sha
+    replicas: 2
+    serviceAccount: strategy
+  trading:
+    image: trading
+    tag: replace-with-git-sha
+    replicas: 2
+    serviceAccount: trading
+  portfolio:
+    image: portfolio
+    tag: replace-with-git-sha
+    replicas: 2
+    serviceAccount: portfolio
+
+workers:
+  messaging:
+    image: messaging
+    tag: replace-with-git-sha
+    replicas: 1
+    serviceAccount: messaging-worker
+    command: ["signaltrade-outbox-publisher"]
+    metricsPort: 9105
+  strategy:
+    image: strategy
+    tag: replace-with-git-sha
+    replicas: 1
+    serviceAccount: strategy-worker
+    command: ["signaltrade-strategy-worker"]
+    metricsPort: 9101
+  trading:
+    image: trading
+    tag: replace-with-git-sha
+    replicas: 1
+    serviceAccount: trading-worker
+    command: ["signaltrade-trading-worker"]
+    metricsPort: 9102
+  portfolio:
+    image: portfolio
+    tag: replace-with-git-sha
+    replicas: 1
+    serviceAccount: portfolio
+    command: ["signaltrade-portfolio-worker"]
+    metricsPort: 9103
+  notification:
+    image: notification
+    tag: replace-with-git-sha
+    replicas: 1
+    serviceAccount: notification-worker
+    command: ["signaltrade-notification-worker"]
+    metricsPort: 9104
+
+resources:
+  api:
+    requests: {cpu: 100m, memory: 192Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+  worker:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {cpu: 500m, memory: 384Mi}
+
+migration:
+  enabled: true
+  image: migrations
+  tag: replace-with-git-sha
+
+ingress:
+  enabled: true
+  className: alb
+  host: signaltrade.cloud
+  loadBalancerName: signaltrade-staging
+  scheme: internet-facing
+  targetType: ip
+  subnets: subnet-0c1b4f7b052172567,subnet-0a90142704caffc7d
+  inboundCidrs: 116.127.32.4/32
+  cloudFrontPrefixList: pl-3b927c52
+  certificateArn: arn:aws:acm:us-east-1:832496385575:certificate/b70ee92b-dbcf-44b4-840c-0bdd9b407a1a,arn:aws:acm:us-east-1:832496385575:certificate/d6c27105-64b9-4e83-af63-64aaf0eabcdc
+
+networkPolicy:
+  enabled: true
+  vpcCidr: 172.31.0.0/16

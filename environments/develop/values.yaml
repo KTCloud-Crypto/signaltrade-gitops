@@ -1,4 +1,0 @@
-global:
-  environment: develop
-
-# 개발 EKS 환경의 image tag와 환경별 override를 관리합니다.

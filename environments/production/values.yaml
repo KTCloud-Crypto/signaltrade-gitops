@@ -1,4 +1,27 @@
 global:
   environment: production
-
-# 운영 EKS 환경의 image tag와 환경별 override를 관리합니다.
+  namespace: signaltrade-production
+secret:
+  commonKey: signaltrade/production/common
+  serviceKeys:
+    identity: signaltrade/production/identity
+    strategy: signaltrade/production/strategy
+    trading: signaltrade/production/trading
+    portfolio: signaltrade/production/portfolio
+    messaging: signaltrade/production/messaging
+    notification: signaltrade/production/notification
+ingress:
+  enabled: false
+  loadBalancerName: signaltrade-production
+apis:
+  identity: {tag: replace-with-release-sha, replicas: 2}
+  strategy: {tag: replace-with-release-sha, replicas: 2}
+  trading: {tag: replace-with-release-sha, replicas: 2}
+  portfolio: {tag: replace-with-release-sha, replicas: 2}
+workers:
+  messaging: {tag: replace-with-release-sha, replicas: 1}
+  strategy: {tag: replace-with-release-sha, replicas: 1}
+  trading: {tag: replace-with-release-sha, replicas: 1}
+  portfolio: {tag: replace-with-release-sha, replicas: 1}
+  notification: {tag: replace-with-release-sha, replicas: 1}
+migration: {tag: replace-with-release-sha}

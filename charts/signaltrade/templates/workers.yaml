@@ -1,0 +1,47 @@
+{{- $root := . -}}
+{{- range $name, $worker := .Values.workers }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}-worker
+  namespace: {{ $root.Values.global.namespace }}
+  labels: {app.kubernetes.io/name: "{{ $name }}-worker", app.kubernetes.io/component: worker}
+spec:
+  replicas: {{ $worker.replicas }}
+  strategy: {type: Recreate}
+  selector: {matchLabels: {app.kubernetes.io/name: "{{ $name }}-worker"}}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: "{{ $name }}-worker", app.kubernetes.io/component: worker}
+    spec:
+      serviceAccountName: {{ $worker.serviceAccount }}
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 60
+      securityContext: {runAsNonRoot: true, runAsUser: 65532, runAsGroup: 65532, fsGroup: 65532, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: worker
+          image: {{ $root.Values.global.imageRegistry }}/{{ $worker.image }}:{{ $worker.tag }}
+          imagePullPolicy: {{ $root.Values.global.imagePullPolicy }}
+          command: {{ toJson $worker.command }}
+          ports: [{name: metrics, containerPort: {{ $worker.metricsPort }}}]
+          envFrom:
+            - secretRef: {name: {{ $name }}}
+          env:
+            {{- range $key, $value := $root.Values.global.commonEnv }}
+            - {name: {{ $key }}, value: {{ $value | quote }}}
+            {{- end }}
+          startupProbe: {httpGet: {path: /metrics, port: metrics}, periodSeconds: 5, failureThreshold: 30}
+          livenessProbe: {httpGet: {path: /metrics, port: metrics}, periodSeconds: 30, timeoutSeconds: 5, failureThreshold: 3}
+          resources: {{- toYaml $root.Values.resources.worker | nindent 12 }}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: ["ALL"]}}
+          volumeMounts: [{name: tmp, mountPath: /tmp}]
+      volumes: [{name: tmp, emptyDir: {medium: Memory, sizeLimit: 64Mi}}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: "{{ $name }}-worker", namespace: {{ $root.Values.global.namespace }}}
+spec:
+  selector: {app.kubernetes.io/name: "{{ $name }}-worker"}
+  ports: [{name: metrics, port: {{ $worker.metricsPort }}, targetPort: metrics}]
+{{- end }}

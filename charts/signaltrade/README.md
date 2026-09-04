@@ -1,4 +1,7 @@
 # SignalTrade Helm Chart
 
-SignalTrade API, Worker, Service, Ingress와 migration Job template을 `templates/`에 둡니다.
-기존 EKS 구성을 확인한 뒤 공통 template과 서비스별 차이를 분리합니다.
+- API: Identity, Strategy, Trading, Portfolio
+- Worker: Messaging, Strategy, Trading, Portfolio, Notification
+- 공통: ExternalSecret, ServiceAccount, migration PreSync Job, ALB Ingress, NetworkPolicy
+
+Secret 값은 저장하지 않고 AWS Secrets Manager의 환경별 경로만 참조합니다. 이미지 tag는 `environments/<environment>/values.yaml`에서 변경합니다.

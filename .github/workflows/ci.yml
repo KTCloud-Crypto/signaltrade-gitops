@@ -22,14 +22,17 @@ jobs:
       - uses: azure/setup-kubectl@v4
 
       - name: Lint Helm chart
-        run: helm lint charts/signaltrade
+        run: |
+          helm lint charts/signaltrade -f environments/staging/values.yaml
+          helm lint addons/monitoring
 
       - name: Render environment Helm values
         run: |
           helm template signaltrade charts/signaltrade \
-            -f environments/develop/values.yaml > /tmp/helm-develop.yaml
+            -f environments/staging/values.yaml > /tmp/helm-staging.yaml
           helm template signaltrade charts/signaltrade \
             -f environments/production/values.yaml > /tmp/helm-production.yaml
+          helm template signaltrade-observability addons/monitoring > /tmp/helm-observability.yaml
 
       - name: Render local Kustomize resources
         run: |
@@ -40,7 +43,15 @@ jobs:
       - name: Validate Kubernetes schemas
         run: |
           docker run --rm -v /tmp:/manifests ghcr.io/yannh/kubeconform:v0.7.0 \
-            -strict -summary \
+            -strict -summary -ignore-missing-schemas \
+            /manifests/helm-staging.yaml \
+            /manifests/helm-production.yaml \
+            /manifests/helm-observability.yaml \
             /manifests/local-apps.yaml \
             /manifests/local-migration.yaml \
             /manifests/local-ingress.yaml
+
+      - name: Validate Argo CD applications
+        run: |
+          docker run --rm -v "$PWD/argocd/applications:/manifests" ghcr.io/yannh/kubeconform:v0.7.0 \
+            -strict -summary -ignore-missing-schemas /manifests

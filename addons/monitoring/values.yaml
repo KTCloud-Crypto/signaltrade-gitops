@@ -1,0 +1,3 @@
+namespace: signaltrade-staging
+awsRegion: us-east-1
+parameterPrefix: /signaltrade/staging/monitoring
