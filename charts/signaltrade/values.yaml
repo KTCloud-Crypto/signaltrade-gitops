@@ -1,0 +1,5 @@
+global:
+  environment: develop
+
+# 서비스별 image, replica, resource, ingress 값은
+# 기존 EKS 구성을 분석한 뒤 이 Chart의 기본값으로 추가합니다.

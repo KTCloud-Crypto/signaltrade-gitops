@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-worker
+  namespace: signaltrade
+  labels: {app.kubernetes.io/name: notification-worker, app.kubernetes.io/part-of: signaltrade}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app.kubernetes.io/name: notification-worker}}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: notification-worker, app.kubernetes.io/part-of: signaltrade}
+    spec:
+      terminationGracePeriodSeconds: 20
+      containers:
+        - name: notification-worker
+          image: signaltrade-notification:local
+          imagePullPolicy: Never
+          command: ["signaltrade-notification-worker"]
+          ports: [{name: metrics, containerPort: 9104}]
+          envFrom:
+            - configMapRef: {name: application-runtime-config}
+            - secretRef: {name: application-runtime-secret}
+          startupProbe: &worker-health
+            tcpSocket: {port: metrics}
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            tcpSocket: {port: metrics}
+            periodSeconds: 5
+          livenessProbe: *worker-health
+          resources:
+            requests: {cpu: 25m, memory: 64Mi}
+            limits: {cpu: 300m, memory: 192Mi}

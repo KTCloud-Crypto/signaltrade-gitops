@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portfolio-api
+  namespace: signaltrade
+  labels: {app.kubernetes.io/name: portfolio-api, app.kubernetes.io/part-of: signaltrade}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app.kubernetes.io/name: portfolio-api}}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: portfolio-api, app.kubernetes.io/part-of: signaltrade}
+    spec:
+      containers:
+        - name: portfolio-api
+          image: signaltrade-portfolio:local
+          imagePullPolicy: Never
+          ports: [{name: http, containerPort: 8000}]
+          envFrom:
+            - configMapRef: {name: application-runtime-config}
+            - secretRef: {name: application-runtime-secret}
+          startupProbe: &health
+            httpGet: {path: /health, port: http}
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: {path: /ready, port: http}
+            periodSeconds: 5
+          livenessProbe: *health
+          resources:
+            requests: {cpu: 25m, memory: 64Mi}
+            limits: {cpu: 500m, memory: 256Mi}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: portfolio-api, namespace: signaltrade}
+spec:
+  selector: {app.kubernetes.io/name: portfolio-api}
+  ports: [{name: http, port: 8000, targetPort: http}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portfolio-worker
+  namespace: signaltrade
+  labels: {app.kubernetes.io/name: portfolio-worker, app.kubernetes.io/part-of: signaltrade}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app.kubernetes.io/name: portfolio-worker}}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: portfolio-worker, app.kubernetes.io/part-of: signaltrade}
+    spec:
+      terminationGracePeriodSeconds: 20
+      containers:
+        - name: portfolio-worker
+          image: signaltrade-portfolio:local
+          imagePullPolicy: Never
+          command: ["signaltrade-portfolio-worker"]
+          ports: [{name: metrics, containerPort: 9103}]
+          envFrom:
+            - configMapRef: {name: application-runtime-config}
+            - secretRef: {name: application-runtime-secret}
+          startupProbe: &worker-health
+            tcpSocket: {port: metrics}
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            tcpSocket: {port: metrics}
+            periodSeconds: 5
+          livenessProbe: *worker-health
+          resources:
+            requests: {cpu: 25m, memory: 64Mi}
+            limits: {cpu: 300m, memory: 192Mi}
