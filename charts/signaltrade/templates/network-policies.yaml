@@ -10,7 +10,7 @@ metadata: {name: application-allow-required, namespace: {{ .Values.global.namesp
 spec:
   podSelector:
     matchExpressions:
-      - {key: app.kubernetes.io/component, operator: In, values: [api, worker]}
+      - {key: app.kubernetes.io/component, operator: In, values: [api, worker, migration]}
   policyTypes: [Ingress, Egress]
   ingress:
     - from:
@@ -22,6 +22,9 @@ spec:
           podSelector: {matchLabels: {k8s-app: kube-dns}}
       ports: [{protocol: UDP, port: 53}, {protocol: TCP, port: 53}]
     - to: [{podSelector: {}}]
+    # EKS Pod Identity Agent credential endpoint on each node.
+    - to: [{ipBlock: {cidr: 169.254.170.23/32}}]
+      ports: [{protocol: TCP, port: 80}]
     - to: [{ipBlock: {cidr: 0.0.0.0/0}}]
       ports: [{protocol: TCP, port: 443}, {protocol: TCP, port: 5432}, {protocol: TCP, port: 6379}]
 {{- end }}

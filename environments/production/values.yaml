@@ -3,12 +3,9 @@ global:
   namespace: signaltrade-production
 secret:
   commonKey: signaltrade/production/common
+  databaseKey: signaltrade/production/database
   serviceKeys:
     identity: signaltrade/production/identity
-    strategy: signaltrade/production/strategy
-    trading: signaltrade/production/trading
-    portfolio: signaltrade/production/portfolio
-    messaging: signaltrade/production/messaging
     notification: signaltrade/production/notification
 ingress:
   enabled: false
