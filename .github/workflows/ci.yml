@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-deployment-state:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - uses: azure/setup-kubectl@v4
+
+      - name: Lint Helm chart
+        run: helm lint charts/signaltrade
+
+      - name: Render environment Helm values
+        run: |
+          helm template signaltrade charts/signaltrade \
+            -f environments/develop/values.yaml > /tmp/helm-develop.yaml
+          helm template signaltrade charts/signaltrade \
+            -f environments/production/values.yaml > /tmp/helm-production.yaml
+
+      - name: Render local Kustomize resources
+        run: |
+          kubectl kustomize environments/local/kustomize/apps > /tmp/local-apps.yaml
+          kubectl kustomize environments/local/kustomize/jobs/database-migration > /tmp/local-migration.yaml
+          kubectl kustomize environments/local/kustomize/platform/ingress > /tmp/local-ingress.yaml
+
+      - name: Validate Kubernetes schemas
+        run: |
+          docker run --rm -v /tmp:/manifests ghcr.io/yannh/kubeconform:v0.7.0 \
+            -strict -summary \
+            /manifests/local-apps.yaml \
+            /manifests/local-migration.yaml \
+            /manifests/local-ingress.yaml
