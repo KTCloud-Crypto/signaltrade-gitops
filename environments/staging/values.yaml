@@ -4,10 +4,9 @@ global:
 secret:
   commonKey: signaltrade/staging/common
   databaseKey: signaltrade/staging/database
-
 # 서비스 CI가 검증된 immutable tag 또는 digest를 이곳에 반영합니다.
 apis:
-  identity: {tag: f3cedabce4afec0e1cc3357be828dd3e5252a765, replicas: 2}
+  identity: {tag: f5a9a9a3afcde44cd70f18df511c32d64c28478b, replicas: 2}
   strategy: {tag: 07501b61b8a64c2aa8673e8a74bedc770ad17b27, replicas: 2}
   trading: {tag: fe3b49ca64fa8ac42f7a3503c0d4b36e91649a06, replicas: 2}
   portfolio: {tag: 5b0cda67d83edf20cf66ce6b42c3dc2a59c336d8, replicas: 2}
