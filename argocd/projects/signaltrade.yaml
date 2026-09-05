@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: signaltrade
+  namespace: argocd
+spec:
+  description: SignalTrade staging GitOps applications
+  sourceRepos:
+    - https://github.com/KTCloud-Crypto/signaltrade-gitops.git
+  destinations:
+    - namespace: signaltrade-staging
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

@@ -18,3 +18,4 @@ workers:
   portfolio: {tag: 5b0cda67d83edf20cf66ce6b42c3dc2a59c336d8, replicas: 1}
   notification: {tag: 4b893524bae95a124697aa9acda229bf2f04def1, replicas: 1}
 migration: {tag: 51ca1c72696e7a25356b2141964dce67ac5b75e2}
+ingress: {enabled: false}

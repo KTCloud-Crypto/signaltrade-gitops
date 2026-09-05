@@ -2,7 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata: {name: signaltrade-staging, namespace: argocd}
 spec:
-  project: default
+  project: signaltrade
   source:
     repoURL: https://github.com/KTCloud-Crypto/signaltrade-gitops.git
     targetRevision: develop
@@ -10,5 +10,8 @@ spec:
     helm: {valueFiles: [../../environments/staging/values.yaml]}
   destination: {server: https://kubernetes.default.svc, namespace: signaltrade-staging}
   syncPolicy:
+    automated: {prune: true, selfHeal: true, allowEmpty: false}
     syncOptions: [CreateNamespace=true, ServerSideApply=true, ApplyOutOfSyncOnly=true]
-    # 초기 전환 검증이 끝난 뒤 automated/prune/selfHeal을 활성화합니다.
+    retry:
+      limit: 5
+      backoff: {duration: 5s, factor: 2, maxDuration: 3m}
