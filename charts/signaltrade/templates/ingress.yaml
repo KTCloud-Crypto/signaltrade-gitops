@@ -30,7 +30,7 @@ spec:
     - host: {{ $a.host }}
       http:
         paths:
-          - path: ^/strategies/[0-9]+/manual-sell$
+          - path: /strategies/[0-9]+/manual-sell$
             pathType: ImplementationSpecific
             backend: {service: {name: trading-api, port: {number: 8000}}}
           - {path: /health, pathType: Exact, backend: {service: {name: identity-api, port: {number: 8000}}}}
