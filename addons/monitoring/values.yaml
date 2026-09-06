@@ -1,3 +1,4 @@
 namespace: signaltrade-staging
+prometheusConfigRevision: "2026-09-06-msa-alerts-v1"
 awsRegion: us-east-1
 parameterPrefix: /signaltrade/staging/monitoring

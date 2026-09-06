@@ -211,7 +211,10 @@ spec:
   strategy: {type: Recreate}
   selector: {matchLabels: {app.kubernetes.io/name: prometheus}}
   template:
-    metadata: {labels: {app.kubernetes.io/name: prometheus}}
+    metadata:
+      labels: {app.kubernetes.io/name: prometheus}
+      annotations:
+        signaltrade.cloud/prometheus-config-revision: {{ .Values.prometheusConfigRevision | quote }}
     spec:
       automountServiceAccountToken: false
       securityContext: {runAsNonRoot: true, runAsUser: 65534, runAsGroup: 65534, fsGroup: 65534, seccompProfile: {type: RuntimeDefault}}
