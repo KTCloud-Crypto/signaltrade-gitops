@@ -15,6 +15,6 @@ workers:
   strategy: {tag: 39e8c0356ac5ba722068eef94e11a47d4bedbdfb, replicas: 1}
   trading: {tag: ccbdbc38c4253b2633f9462e6f8755f494360f71, replicas: 1}
   portfolio: {tag: d5cf250a76cff1d45d4f4e9875410311afcc5d37, replicas: 1}
-  notification: {tag: 6118dbb26a5d5b598a13bea20bb81829d1377a80, replicas: 1}
+  notification: {tag: c2b0ee89402a4f4a196908ef3e03b123190c9a79, replicas: 1}
 migration: {tag: 6e00ed3f9e7a9574f496c55deb08fa0b90e73d42}
 ingress: {enabled: false}
