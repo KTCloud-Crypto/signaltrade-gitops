@@ -4,7 +4,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   # 기존 ALB를 재생성하지 않고 현재 레거시 Ingress를 GitOps가 인수합니다.
-  # 세부 MSA 경로가 먼저 매칭되고 마지막 / 규칙은 롤백용 레거시 fallback입니다.
+  # 모든 API 경로를 서비스별 MSA target으로 전달합니다.
   name: backend
   namespace: {{ .Values.global.namespace }}
   annotations:
@@ -44,5 +44,4 @@ spec:
           - {path: /strategies/liquidate-all, pathType: Exact, backend: {service: {name: trading-api, port: {number: 8000}}}}
           - {path: /strategies/positions, pathType: Exact, backend: {service: {name: portfolio-api, port: {number: 8000}}}}
           - {path: /strategies, pathType: Prefix, backend: {service: {name: strategy-api, port: {number: 8000}}}}
-          - {path: /, pathType: Prefix, backend: {service: {name: backend, port: {number: 80}}}}
 {{- end }}
