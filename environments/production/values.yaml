@@ -1,6 +1,16 @@
 global:
   environment: production
   namespace: signaltrade-production
+  commonEnv:
+    ENVIRONMENT: production
+    AWS_REGION: us-east-1
+    SQS_TRADING_COMMAND_QUEUE_NAME: signaltrade-production-trading-commands
+    SQS_STRATEGY_COMMAND_QUEUE_NAME: signaltrade-production-strategy-commands
+    SQS_NOTIFICATION_QUEUE_NAME: signaltrade-production-notifications
+    IDENTITY_SERVICE_URL: http://identity-api:8000
+    STRATEGY_SERVICE_URL: http://strategy-api:8000
+    TRADING_SERVICE_URL: http://trading-api:8000
+    PORTFOLIO_SERVICE_URL: http://portfolio-api:8000
 secret:
   commonKey: signaltrade/production/common
   databaseKey: signaltrade/production/database
