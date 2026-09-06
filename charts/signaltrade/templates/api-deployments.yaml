@@ -31,6 +31,9 @@ spec:
             {{- range $key, $value := $root.Values.global.commonEnv }}
             - {name: {{ $key }}, value: {{ $value | quote }}}
             {{- end }}
+            {{- range $key, $value := ($api.env | default dict) }}
+            - {name: {{ $key }}, value: {{ $value | quote }}}
+            {{- end }}
           startupProbe: {httpGet: {path: /health, port: http, httpHeaders: [{name: Host, value: localhost}]}, periodSeconds: 5, failureThreshold: 30}
           readinessProbe: {httpGet: {path: /ready, port: http, httpHeaders: [{name: Host, value: localhost}]}, periodSeconds: 10, timeoutSeconds: 3, failureThreshold: 3}
           livenessProbe: {httpGet: {path: /health, port: http, httpHeaders: [{name: Host, value: localhost}]}, periodSeconds: 30, timeoutSeconds: 5, failureThreshold: 3}
