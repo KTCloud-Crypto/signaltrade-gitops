@@ -3,17 +3,18 @@ global:
   namespace: signaltrade-staging
 secret:
   commonKey: signaltrade/staging/common
-
+  databaseKey: signaltrade/staging/database
 # 서비스 CI가 검증된 immutable tag 또는 digest를 이곳에 반영합니다.
 apis:
-  identity: {tag: replace-with-git-sha, replicas: 2}
-  strategy: {tag: replace-with-git-sha, replicas: 2}
-  trading: {tag: replace-with-git-sha, replicas: 2}
-  portfolio: {tag: replace-with-git-sha, replicas: 2}
+  identity: {tag: f5a9a9a3afcde44cd70f18df511c32d64c28478b, replicas: 2}
+  strategy: {tag: 39e8c0356ac5ba722068eef94e11a47d4bedbdfb, replicas: 2}
+  trading: {tag: ccbdbc38c4253b2633f9462e6f8755f494360f71, replicas: 2}
+  portfolio: {tag: d5cf250a76cff1d45d4f4e9875410311afcc5d37, replicas: 2}
 workers:
-  messaging: {tag: replace-with-git-sha, replicas: 1}
-  strategy: {tag: replace-with-git-sha, replicas: 1}
-  trading: {tag: replace-with-git-sha, replicas: 1}
-  portfolio: {tag: replace-with-git-sha, replicas: 1}
-  notification: {tag: replace-with-git-sha, replicas: 1}
-migration: {tag: replace-with-git-sha}
+  messaging: {tag: b448fbca259b6eaa0d18805c1ae0d84bcea6df37, replicas: 1}
+  strategy: {tag: 39e8c0356ac5ba722068eef94e11a47d4bedbdfb, replicas: 1}
+  trading: {tag: ccbdbc38c4253b2633f9462e6f8755f494360f71, replicas: 1}
+  portfolio: {tag: d5cf250a76cff1d45d4f4e9875410311afcc5d37, replicas: 1}
+  notification: {tag: 6118dbb26a5d5b598a13bea20bb81829d1377a80, replicas: 1}
+migration: {tag: 57e54a43cb443b835935d6f8ab194361b85e034d}
+ingress: {enabled: false}

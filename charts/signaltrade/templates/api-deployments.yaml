@@ -16,6 +16,7 @@ spec:
       labels: {app.kubernetes.io/name: "{{ $name }}-api", app.kubernetes.io/component: api}
     spec:
       serviceAccountName: {{ $api.serviceAccount }}
+      nodeSelector: {{- toYaml $root.Values.global.nodeSelector | nindent 8 }}
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: 30
       securityContext: {runAsNonRoot: true, runAsUser: 65532, runAsGroup: 65532, fsGroup: 65532, seccompProfile: {type: RuntimeDefault}}
@@ -30,9 +31,9 @@ spec:
             {{- range $key, $value := $root.Values.global.commonEnv }}
             - {name: {{ $key }}, value: {{ $value | quote }}}
             {{- end }}
-          startupProbe: {httpGet: {path: /health, port: http}, periodSeconds: 5, failureThreshold: 30}
-          readinessProbe: {httpGet: {path: /ready, port: http}, periodSeconds: 10, timeoutSeconds: 3, failureThreshold: 3}
-          livenessProbe: {httpGet: {path: /health, port: http}, periodSeconds: 30, timeoutSeconds: 5, failureThreshold: 3}
+          startupProbe: {httpGet: {path: /health, port: http, httpHeaders: [{name: Host, value: localhost}]}, periodSeconds: 5, failureThreshold: 30}
+          readinessProbe: {httpGet: {path: /ready, port: http, httpHeaders: [{name: Host, value: localhost}]}, periodSeconds: 10, timeoutSeconds: 3, failureThreshold: 3}
+          livenessProbe: {httpGet: {path: /health, port: http, httpHeaders: [{name: Host, value: localhost}]}, periodSeconds: 30, timeoutSeconds: 5, failureThreshold: 3}
           resources: {{- toYaml $root.Values.resources.api | nindent 12 }}
           securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: ["ALL"]}}
           volumeMounts: [{name: tmp, mountPath: /tmp}]

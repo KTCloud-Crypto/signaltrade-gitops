@@ -1,0 +1,86 @@
+name: Promote staging image
+
+on:
+  repository_dispatch:
+    types: [promote-staging-image]
+  workflow_dispatch:
+    inputs:
+      service:
+        description: Service to promote
+        required: true
+        type: choice
+        options: [identity, strategy, trading, portfolio, messaging, notification, migrations]
+      tag:
+        description: Immutable 40-character Git SHA image tag
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: staging-image-promotion-${{ github.event.client_payload.service || inputs.service }}
+  cancel-in-progress: false
+
+jobs:
+  update-gitops:
+    runs-on: ubuntu-latest
+    env:
+      SERVICE: ${{ github.event.client_payload.service || inputs.service }}
+      IMAGE_TAG: ${{ github.event.client_payload.tag || inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: develop}
+      - name: Validate promotion request
+        shell: bash
+        run: |
+          [[ "$SERVICE" =~ ^(identity|strategy|trading|portfolio|messaging|notification|migrations)$ ]]
+          [[ "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]]
+      - name: Update identity tag
+        if: env.SERVICE == 'identity'
+        uses: mikefarah/yq@v4.53.6
+        with:
+          cmd: yq -i '.apis.identity.tag = strenv(IMAGE_TAG)' environments/staging/values.yaml
+      - name: Update strategy tags
+        if: env.SERVICE == 'strategy'
+        uses: mikefarah/yq@v4.53.6
+        with:
+          cmd: yq -i '.apis.strategy.tag = strenv(IMAGE_TAG) | .workers.strategy.tag = strenv(IMAGE_TAG)' environments/staging/values.yaml
+      - name: Update trading tags
+        if: env.SERVICE == 'trading'
+        uses: mikefarah/yq@v4.53.6
+        with:
+          cmd: yq -i '.apis.trading.tag = strenv(IMAGE_TAG) | .workers.trading.tag = strenv(IMAGE_TAG)' environments/staging/values.yaml
+      - name: Update portfolio tags
+        if: env.SERVICE == 'portfolio'
+        uses: mikefarah/yq@v4.53.6
+        with:
+          cmd: yq -i '.apis.portfolio.tag = strenv(IMAGE_TAG) | .workers.portfolio.tag = strenv(IMAGE_TAG)' environments/staging/values.yaml
+      - name: Update messaging tag
+        if: env.SERVICE == 'messaging'
+        uses: mikefarah/yq@v4.53.6
+        with:
+          cmd: yq -i '.workers.messaging.tag = strenv(IMAGE_TAG)' environments/staging/values.yaml
+      - name: Update notification tag
+        if: env.SERVICE == 'notification'
+        uses: mikefarah/yq@v4.53.6
+        with:
+          cmd: yq -i '.workers.notification.tag = strenv(IMAGE_TAG)' environments/staging/values.yaml
+      - name: Update migrations tag
+        if: env.SERVICE == 'migrations'
+        uses: mikefarah/yq@v4.53.6
+        with:
+          cmd: yq -i '.migration.tag = strenv(IMAGE_TAG)' environments/staging/values.yaml
+      - name: Commit promotion
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "Image tag is already current."
+            exit 0
+          fi
+          git config user.name "signaltrade-gitops-bot"
+          git config user.email "signaltrade-gitops-bot@users.noreply.github.com"
+          git add environments/staging/values.yaml
+          git commit -m "deploy(staging): promote ${SERVICE} to ${IMAGE_TAG}"
+          git pull --rebase origin develop
+          git push origin HEAD:develop

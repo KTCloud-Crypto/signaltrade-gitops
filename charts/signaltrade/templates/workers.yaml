@@ -16,6 +16,7 @@ spec:
       labels: {app.kubernetes.io/name: "{{ $name }}-worker", app.kubernetes.io/component: worker}
     spec:
       serviceAccountName: {{ $worker.serviceAccount }}
+      nodeSelector: {{- toYaml $root.Values.global.nodeSelector | nindent 8 }}
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: 60
       securityContext: {runAsNonRoot: true, runAsUser: 65532, runAsGroup: 65532, fsGroup: 65532, seccompProfile: {type: RuntimeDefault}}

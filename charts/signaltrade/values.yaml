@@ -4,6 +4,8 @@ global:
   awsRegion: us-east-1
   imageRegistry: 832496385575.dkr.ecr.us-east-1.amazonaws.com/signaltrade
   imagePullPolicy: IfNotPresent
+  nodeSelector:
+    workload: msa
   commonEnv:
     ENVIRONMENT: staging
     AWS_REGION: us-east-1
@@ -18,12 +20,9 @@ global:
 secret:
   storeName: signaltrade-secrets-manager
   commonKey: signaltrade/staging/common
+  databaseKey: signaltrade/staging/database
   serviceKeys:
     identity: signaltrade/staging/identity
-    strategy: signaltrade/staging/strategy
-    trading: signaltrade/staging/trading
-    portfolio: signaltrade/staging/portfolio
-    messaging: signaltrade/staging/messaging
     notification: signaltrade/staging/notification
   refreshInterval: 1h
 
