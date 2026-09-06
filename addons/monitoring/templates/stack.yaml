@@ -57,7 +57,7 @@ data:
       - name: signaltrade-availability
         rules:
           - alert: SignalTradeTargetDown
-            expr: up{job=~"backend|strategy-worker"} == 0
+            expr: up{job="backend",instance=~".+-api:8000"} == 0 or up{job="strategy-worker"} == 0
             for: 2m
             labels: {severity: critical}
             annotations:
