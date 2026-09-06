@@ -3,12 +3,12 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: signaltrade-public
+  # 기존 ALB를 재생성하지 않고 현재 레거시 Ingress를 GitOps가 인수합니다.
+  # 세부 MSA 경로가 먼저 매칭되고 마지막 / 규칙은 롤백용 레거시 fallback입니다.
+  name: backend
   namespace: {{ .Values.global.namespace }}
   annotations:
     alb.ingress.kubernetes.io/load-balancer-name: {{ $a.loadBalancerName }}
-    alb.ingress.kubernetes.io/group.name: signaltrade-public
-    alb.ingress.kubernetes.io/group.order: "10"
     alb.ingress.kubernetes.io/scheme: {{ $a.scheme }}
     alb.ingress.kubernetes.io/target-type: {{ $a.targetType }}
     alb.ingress.kubernetes.io/subnets: {{ $a.subnets | quote }}
@@ -18,13 +18,21 @@ metadata:
     alb.ingress.kubernetes.io/certificate-arn: {{ $a.certificateArn | quote }}
     alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
     alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/success-codes: "200"
+    alb.ingress.kubernetes.io/use-regex-path-match: "true"
     alb.ingress.kubernetes.io/load-balancer-attributes: routing.http.drop_invalid_header_fields.enabled=true,deletion_protection.enabled=true
+    alb.ingress.kubernetes.io/tags: Project=SignalTrade,Environment={{ .Values.global.environment }},Purpose=application
 spec:
   ingressClassName: {{ $a.className }}
   rules:
     - host: {{ $a.host }}
       http:
         paths:
+          - path: ^/strategies/[0-9]+/manual-sell$
+            pathType: ImplementationSpecific
+            backend: {service: {name: trading-api, port: {number: 8000}}}
           - {path: /health, pathType: Exact, backend: {service: {name: identity-api, port: {number: 8000}}}}
           - {path: /monitoring, pathType: Prefix, backend: {service: {name: grafana, port: {number: 80}}}}
           - {path: /auth, pathType: Prefix, backend: {service: {name: identity-api, port: {number: 8000}}}}
@@ -37,25 +45,5 @@ spec:
           - {path: /strategies/liquidate-all, pathType: Exact, backend: {service: {name: trading-api, port: {number: 8000}}}}
           - {path: /strategies/positions, pathType: Exact, backend: {service: {name: portfolio-api, port: {number: 8000}}}}
           - {path: /strategies, pathType: Prefix, backend: {service: {name: strategy-api, port: {number: 8000}}}}
----
-# 숫자 strategy id가 들어가는 /strategies/{id}/manual-sell은 일반 Prefix 규칙과
-# 겹치므로 ALB 정규식 규칙으로 Trading에 우선 전달합니다.
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: signaltrade-manual-sell
-  namespace: {{ .Values.global.namespace }}
-  annotations:
-    alb.ingress.kubernetes.io/group.name: signaltrade-public
-    alb.ingress.kubernetes.io/group.order: "1"
-    alb.ingress.kubernetes.io/use-regex-path-match: "true"
-spec:
-  ingressClassName: {{ $a.className }}
-  rules:
-    - host: {{ $a.host }}
-      http:
-        paths:
-          - path: ^/strategies/[0-9]+/manual-sell$
-            pathType: ImplementationSpecific
-            backend: {service: {name: trading-api, port: {number: 8000}}}
+          - {path: /, pathType: Prefix, backend: {service: {name: backend, port: {number: 80}}}}
 {{- end }}

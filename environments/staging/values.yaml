@@ -17,4 +17,4 @@ workers:
   portfolio: {tag: a8379c280f7b258ef7c18d01ddfd0bd0b2b0ea32, replicas: 1}
   notification: {tag: c2b0ee89402a4f4a196908ef3e03b123190c9a79, replicas: 1}
 migration: {tag: 6e00ed3f9e7a9574f496c55deb08fa0b90e73d42}
-ingress: {enabled: false}
+ingress: {enabled: true}
