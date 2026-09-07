@@ -14,6 +14,25 @@ apiVersion: v1
 kind: ServiceAccount
 metadata: {name: alloy, namespace: {{ .Values.namespace }}}
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata: {name: prometheus, namespace: {{ .Values.namespace }}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata: {name: signaltrade-prometheus-pod-discovery-{{ .Values.environment }}}
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata: {name: signaltrade-prometheus-pod-discovery-{{ .Values.environment }}}
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: signaltrade-prometheus-pod-discovery-{{ .Values.environment }}}
+subjects:
+  - {kind: ServiceAccount, name: prometheus, namespace: {{ .Values.namespace }}}
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata: {name: signaltrade-alloy-pod-logs}
@@ -40,10 +59,31 @@ data:
     rule_files:
       - /etc/prometheus/signaltrade-alerts.yml
     scrape_configs:
-      - job_name: backend
-        static_configs: [{targets: ["identity-api:8000", "strategy-api:8000", "trading-api:8000", "portfolio-api:8000"]}]
-      - job_name: strategy-worker
-        static_configs: [{targets: ["strategy-worker:9101", "trading-worker:9102", "portfolio-worker:9103", "notification-worker:9104", "messaging-worker:9105"]}]
+      - job_name: signaltrade-pods
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [{{ .Values.namespace | quote }}]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
+            regex: api|worker
+            action: keep
+          - source_labels: [__meta_kubernetes_pod_container_port_name]
+            regex: http|metrics
+            action: keep
+          - source_labels: [__meta_kubernetes_pod_phase]
+            regex: Running
+            action: keep
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+            target_label: job
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__meta_kubernetes_pod_container_name]
+            target_label: container
+          - target_label: environment
+            replacement: {{ .Values.environment | quote }}
       - job_name: postgres
         static_configs: [{targets: ["postgres-exporter:9187"]}]
       - job_name: prometheus
@@ -57,12 +97,12 @@ data:
       - name: signaltrade-availability
         rules:
           - alert: SignalTradeTargetDown
-            expr: up{job="backend",instance=~".+-api:8000"} == 0 or up{job="strategy-worker"} == 0
+            expr: up{job=~".+-(api|worker)"} == 0
             for: 2m
             labels: {severity: critical}
             annotations:
-              summary: "SignalTrade target is unavailable"
-              description: "{{`{{ $labels.instance }}`}} in {{`{{ $labels.job }}`}} has been down for more than 2 minutes."
+              summary: "SignalTrade Pod metrics target is unavailable"
+              description: "{{`{{ $labels.pod }}`}} ({{`{{ $labels.job }}`}}) has been down for more than 2 minutes."
           - alert: SignalTradeOutboxPublishFailures
             expr: increase(signaltrade_outbox_failed_total[10m]) > 0
             labels: {severity: warning}
@@ -216,7 +256,8 @@ spec:
       annotations:
         signaltrade.cloud/prometheus-config-revision: {{ .Values.prometheusConfigRevision | quote }}
     spec:
-      automountServiceAccountToken: false
+      serviceAccountName: prometheus
+      automountServiceAccountToken: true
       securityContext: {runAsNonRoot: true, runAsUser: 65534, runAsGroup: 65534, fsGroup: 65534, seccompProfile: {type: RuntimeDefault}}
       containers:
         - name: prometheus
@@ -296,6 +337,7 @@ spec:
             - {name: GF_AUTH_ANONYMOUS_ENABLED, value: "false"}
             - {name: GF_SERVER_ROOT_URL, value: "https://signaltrade.cloud/monitoring/"}
             - {name: GF_SERVER_SERVE_FROM_SUB_PATH, value: "true"}
+            - {name: GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH, value: /var/lib/grafana/dashboards/main-summary.json}
             - {name: GF_SECURITY_ADMIN_USER, valueFrom: {secretKeyRef: {name: monitoring, key: GRAFANA_ADMIN_USER}}}
             - {name: GF_SECURITY_ADMIN_PASSWORD, valueFrom: {secretKeyRef: {name: monitoring, key: GRAFANA_ADMIN_PASSWORD}}}
           volumeMounts:
@@ -311,7 +353,7 @@ spec:
       volumes:
         - {name: data, persistentVolumeClaim: {claimName: grafana-data}}
         - {name: provisioning, configMap: {name: grafana-provisioning}}
-        - {name: dashboards, configMap: {name: grafana-dashboards, optional: true}}
+        - {name: dashboards, configMap: {name: grafana-dashboards}}
         - {name: tmp, emptyDir: {medium: Memory, sizeLimit: 64Mi}}
 ---
 apiVersion: v1

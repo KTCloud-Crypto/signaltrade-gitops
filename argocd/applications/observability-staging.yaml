@@ -8,7 +8,9 @@ spec:
     targetRevision: develop
     path: addons/monitoring
     helm:
-      parameters: [{name: namespace, value: signaltrade-staging}]
+      parameters:
+        - {name: namespace, value: signaltrade-staging}
+        - {name: environment, value: staging}
   destination: {server: https://kubernetes.default.svc, namespace: signaltrade-staging}
   syncPolicy:
     automated: {prune: true, selfHeal: true, allowEmpty: false}
