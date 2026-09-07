@@ -1,0 +1,38 @@
+{{- if .Values.autoscaling.enabled }}
+{{- $root := . -}}
+{{- range $name, $api := .Values.apis }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ $name }}-api
+  namespace: {{ $root.Values.global.namespace }}
+  labels: {app.kubernetes.io/name: "{{ $name }}-api", app.kubernetes.io/component: api}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ $name }}-api
+  minReplicas: {{ $root.Values.autoscaling.minReplicas }}
+  maxReplicas: {{ $root.Values.autoscaling.maxReplicas }}
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: {{ $root.Values.autoscaling.behavior.scaleUpStabilizationWindowSeconds }}
+      selectPolicy: Max
+      policies:
+        - {type: Percent, value: 100, periodSeconds: 60}
+        - {type: Pods, value: 2, periodSeconds: 60}
+    scaleDown:
+      stabilizationWindowSeconds: {{ $root.Values.autoscaling.behavior.scaleDownStabilizationWindowSeconds }}
+      selectPolicy: Max
+      policies:
+        - {type: Percent, value: 50, periodSeconds: 60}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $root.Values.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}
+{{- end }}
