@@ -18,3 +18,8 @@ workers:
   notification: {tag: c2b0ee89402a4f4a196908ef3e03b123190c9a79, replicas: 1}
 migration: {tag: 6e00ed3f9e7a9574f496c55deb08fa0b90e73d42}
 ingress: {enabled: true}
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
