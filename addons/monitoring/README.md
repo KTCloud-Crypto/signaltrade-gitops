@@ -1,6 +1,8 @@
 # 모니터링
 
-운영에서 서비스 상태와 자동매매 흐름을 확인하는 설정을 모으는 경로입니다.
+Prometheus, Loki, Alloy, Grafana와 PostgreSQL exporter를 Argo CD로 배포하는 Helm chart입니다. `dashboards/`의 Grafana 대시보드는 `grafana-dashboards` ConfigMap으로 자동 패키징되어 함께 배포됩니다.
+
+Prometheus는 Kubernetes API에서 `app.kubernetes.io/component=api|worker` Pod를 발견하고 `http|metrics` 이름의 포트를 Pod별로 수집합니다. ServiceAccount에는 Pod 조회 전용 읽기 권한만 부여합니다.
 
 ## 확인할 항목
 
