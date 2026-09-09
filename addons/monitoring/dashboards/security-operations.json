@@ -54,7 +54,7 @@
       "title": "Backend 도달 의심 경로 (1시간)",
       "description": "ALB가 최근 1시간 동안 Backend로 전달한 .env, .git, wp-admin, phpinfo 등 취약 파일·관리 경로 탐색 요청입니다.",
       "datasource": {"uid": "loki", "type": "loki"},
-      "targets": [{"expr": "sum(count_over_time({service=\"edge-alb\",source=\"alb\",log_type=\"security_access\",environment=~\"$environment\"} | json | event=\"http_request_completed\" | path=~\"${suspicious_path:raw}\" [1h]))", "instant": true, "refId": "A"}],
+      "targets": [{"expr": "sum(count_over_time({service=\"edge-alb\",source=\"alb\",log_type=\"security_access\",environment=~\"$environment\"} | json | event=\"http_request_completed\" | path=~`${suspicious_path:raw}` [1h]))", "instant": true, "refId": "A"}],
       "fieldConfig": {"defaults": {"min": 0, "unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1}, {"color": "red", "value": 10}]}}},
       "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "center", "textMode": "auto", "wideLayout": true},
       "gridPos": {"x": 0, "y": 0, "w": 6, "h": 5}
@@ -114,7 +114,7 @@
       "title": "의심 경로 상위 10개",
       "description": "ALB까지 도달한 요청 중 가장 많이 탐색된 취약 파일·관리 경로입니다. 새 경로가 반복되면 탐지 규칙과 차단 정책 후보에 추가합니다.",
       "datasource": {"uid": "loki", "type": "loki"},
-      "targets": [{"expr": "topk(10, sum by (path) (count_over_time({service=\"edge-alb\",source=\"alb\",log_type=\"security_access\",environment=~\"$environment\"} | json | event=\"http_request_completed\" | path=~\"${suspicious_path:raw}\" [$__range])))", "instant": true, "legendFormat": "{{path}}", "refId": "A"}],
+      "targets": [{"expr": "topk(10, sum by (path) (count_over_time({service=\"edge-alb\",source=\"alb\",log_type=\"security_access\",environment=~\"$environment\"} | json | event=\"http_request_completed\" | path=~`${suspicious_path:raw}` [$__range])))", "instant": true, "legendFormat": "{{path}}", "refId": "A"}],
       "fieldConfig": {"defaults": {"min": 0, "unit": "short", "color": {"mode": "continuous-GrYlRd"}}},
       "options": {"displayMode": "gradient", "orientation": "horizontal", "showUnfilled": true, "valueMode": "color", "namePlacement": "left", "valuePlacement": "right"},
       "gridPos": {"x": 0, "y": 13, "w": 8, "h": 8}
@@ -124,7 +124,7 @@
       "title": "스캐너 IP 상위 10개",
       "description": "CloudFront에서 관측한 실제 Viewer IP 중 의심 경로 요청이 많은 순서입니다. Backend 도달 여부는 같은 시간대의 ALB 의심 경로 패널과 함께 판단합니다.",
       "datasource": {"uid": "loki", "type": "loki"},
-      "targets": [{"expr": "topk(10, sum by (client_ip) (count_over_time({service=\"edge-cloudfront\",source=\"cloudfront\",log_type=\"security_access\",environment=~\"$environment\"} | json | event=\"http_request_completed\" | client_ip!=\"\" | client_ip=~\"$client_ip\" | path=~\"${suspicious_path:raw}\" [$__range])))", "instant": true, "legendFormat": "{{client_ip}}", "refId": "A"}],
+      "targets": [{"expr": "topk(10, sum by (client_ip) (count_over_time({service=\"edge-cloudfront\",source=\"cloudfront\",log_type=\"security_access\",environment=~\"$environment\"} | json | event=\"http_request_completed\" | client_ip!=\"\" | client_ip=~\"$client_ip\" | path=~`${suspicious_path:raw}` [$__range])))", "instant": true, "legendFormat": "{{client_ip}}", "refId": "A"}],
       "fieldConfig": {"defaults": {"min": 0, "unit": "short", "color": {"mode": "continuous-GrYlRd"}}},
       "options": {"displayMode": "gradient", "orientation": "horizontal", "showUnfilled": true, "valueMode": "color", "namePlacement": "left", "valuePlacement": "right"},
       "gridPos": {"x": 8, "y": 13, "w": 8, "h": 8}
@@ -144,7 +144,7 @@
       "title": "최근 CloudFront 의심 경로 요청",
       "description": "CloudFront에서 관측한 요청 시각, 실제 Viewer IP, 상태 코드, 메서드와 경로입니다. Backend 도달 여부는 ALB 패널과 시간·경로를 함께 확인합니다.",
       "datasource": {"uid": "loki", "type": "loki"},
-      "targets": [{"expr": "{service=\"edge-cloudfront\",source=\"cloudfront\",log_type=\"security_access\",environment=~\"$environment\"} | json | event=\"http_request_completed\" | client_ip=~\"$client_ip\" | request_id=~\"$request_id\" | path=~\"${suspicious_path:raw}\" | line_format \"IP={{.client_ip}} status={{.status_code}} {{.method}} {{.path}} request_id={{.request_id}}\"", "queryType": "range", "refId": "A"}],
+      "targets": [{"expr": "{service=\"edge-cloudfront\",source=\"cloudfront\",log_type=\"security_access\",environment=~\"$environment\"} | json | event=\"http_request_completed\" | client_ip=~\"$client_ip\" | request_id=~\"$request_id\" | path=~`${suspicious_path:raw}` | line_format \"IP={{.client_ip}} status={{.status_code}} {{.method}} {{.path}} request_id={{.request_id}}\"", "queryType": "range", "refId": "A"}],
       "options": {"showTime": true, "showLabels": false, "showCommonLabels": false, "wrapLogMessage": true, "prettifyLogMessage": false, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"},
       "gridPos": {"x": 0, "y": 21, "w": 12, "h": 10}
     },
