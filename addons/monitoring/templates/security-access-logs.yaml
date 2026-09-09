@@ -114,7 +114,10 @@ spec:
   strategy: {type: Recreate}
   selector: {matchLabels: {app.kubernetes.io/name: security-log-collector}}
   template:
-    metadata: {labels: {app.kubernetes.io/name: security-log-collector}}
+    metadata:
+      labels: {app.kubernetes.io/name: security-log-collector}
+      annotations:
+        signaltrade.io/config-revision: {{ .Values.securityLogCollectorConfigRevision | quote }}
     spec:
       serviceAccountName: security-log-collector
       automountServiceAccountToken: true
