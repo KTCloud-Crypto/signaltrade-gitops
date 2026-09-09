@@ -53,12 +53,14 @@ spec:
       containers:
         - name: kube-state-metrics
           image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.19.1
+          args:
+            - --resources=pods,deployments,replicasets,statefulsets,daemonsets,nodes,jobs,cronjobs,horizontalpodautoscalers,persistentvolumeclaims,persistentvolumes
           ports:
             - {name: metrics, containerPort: 8080}
             - {name: telemetry, containerPort: 8081}
           securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
-          readinessProbe: {httpGet: {path: /readyz, port: telemetry}, initialDelaySeconds: 5, periodSeconds: 10}
-          livenessProbe: {httpGet: {path: /healthz, port: telemetry}, initialDelaySeconds: 15, periodSeconds: 30}
+          readinessProbe: {httpGet: {path: /metrics, port: metrics}, initialDelaySeconds: 5, periodSeconds: 10}
+          livenessProbe: {httpGet: {path: /metrics, port: metrics}, initialDelaySeconds: 15, periodSeconds: 30}
           resources: {requests: {cpu: 50m, memory: 96Mi}, limits: {cpu: 300m, memory: 256Mi}}
 ---
 apiVersion: v1
@@ -68,11 +70,23 @@ spec:
   selector: {app.kubernetes.io/name: kube-state-metrics}
   ports: [{name: metrics, port: 8080, targetPort: metrics}]
 ---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.nodeExporterNamespace }}
+  labels:
+    app.kubernetes.io/part-of: signaltrade
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: node-exporter
-  namespace: {{ .Values.namespace }}
+  namespace: {{ .Values.nodeExporterNamespace }}
   labels: {app.kubernetes.io/name: node-exporter, app.kubernetes.io/component: monitoring}
 spec:
   selector: {matchLabels: {app.kubernetes.io/name: node-exporter}}

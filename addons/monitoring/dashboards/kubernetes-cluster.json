@@ -83,6 +83,52 @@
       "targets": [{"expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",image!=\"\"})", "legendFormat": "{{pod}}", "refId": "A"}],
       "title": "Pod Memory Working Set",
       "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 21},
+      "id": 10,
+      "description": "원하는 replica 수보다 실제 사용 가능한 replica 수가 부족한 Deployment만 표시합니다. deployment 열로 장애 서비스를 바로 식별합니다.",
+      "options": {"showHeader": true},
+      "targets": [{"expr": "kube_deployment_spec_replicas{namespace=\"$namespace\"} - kube_deployment_status_replicas_available{namespace=\"$namespace\"} > 0", "format": "table", "instant": true, "refId": "A"}],
+      "title": "Unavailable Deployments (deployment별 부족 replica)",
+      "transformations": [{"id": "organize", "options": {"excludeByName": {"Time": true, "__name__": true}, "renameByName": {"Value": "unavailable replicas"}}}],
+      "type": "table"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 21},
+      "id": 11,
+      "description": "CrashLoopBackOff, 이미지 다운로드 실패, 컨테이너 설정 오류 상태만 표시합니다. pod·container·reason 열로 오류 대상을 식별합니다.",
+      "options": {"showHeader": true},
+      "targets": [{"expr": "kube_pod_container_status_waiting_reason{namespace=\"$namespace\",reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError\"} == 1", "format": "table", "instant": true, "refId": "A"}],
+      "title": "Waiting/Error Containers (pod·container·reason)",
+      "transformations": [{"id": "organize", "options": {"excludeByName": {"Time": true, "Value": true, "__name__": true}}}],
+      "type": "table"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 29},
+      "id": 12,
+      "description": "최근 1시간 재시작이 발생한 컨테이너를 횟수순으로 표시합니다. 일시적으로 복구되어 현재 Running인 장애도 찾을 수 있습니다.",
+      "options": {"showHeader": true},
+      "targets": [{"expr": "topk(20, increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\"}[1h])) > 0", "format": "table", "instant": true, "refId": "A"}],
+      "title": "Container Restarts by Pod (1h)",
+      "transformations": [{"id": "organize", "options": {"excludeByName": {"Time": true, "__name__": true}, "renameByName": {"Value": "restarts"}}}],
+      "type": "table"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 29},
+      "id": 13,
+      "description": "상단 Pod·Container 필터에서 선택한 대상의 Loki 로그를 최신순으로 표시합니다. 상세 표에서 확인한 이름을 선택해 원인을 추적합니다.",
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
+      "targets": [{"expr": "{namespace=\"$namespace\",pod=~\"$pod\",container=~\"$container\"}", "queryType": "range", "refId": "A"}],
+      "title": "Selected Pod/Container Logs",
+      "type": "logs"
     }
   ],
   "refresh": "30s",
@@ -99,6 +145,32 @@
         "query": {"query": "label_values(kube_pod_info, namespace)", "refId": "PrometheusVariableQueryEditor-VariableQuery"},
         "refresh": 1,
         "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {"text": "All", "value": "$__all"},
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "definition": "label_values(kube_pod_info{namespace=\"$namespace\"}, pod)",
+        "includeAll": true,
+        "label": "Pod",
+        "multi": true,
+        "name": "pod",
+        "query": {"query": "label_values(kube_pod_info{namespace=\"$namespace\"}, pod)", "refId": "PrometheusVariableQueryEditor-VariableQuery"},
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {"text": "All", "value": "$__all"},
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "definition": "label_values(kube_pod_container_info{namespace=\"$namespace\",pod=~\"$pod\"}, container)",
+        "includeAll": true,
+        "label": "Container",
+        "multi": true,
+        "name": "container",
+        "query": {"query": "label_values(kube_pod_container_info{namespace=\"$namespace\",pod=~\"$pod\"}, container)", "refId": "PrometheusVariableQueryEditor-VariableQuery"},
+        "refresh": 1,
+        "type": "query"
       }
     ]
   },
@@ -106,5 +178,5 @@
   "timezone": "browser",
   "title": "SignalTrade Kubernetes 클러스터",
   "uid": "signaltrade-kubernetes",
-  "version": 1
+  "version": 2
 }

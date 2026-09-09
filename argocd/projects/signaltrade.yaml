@@ -10,6 +10,8 @@ spec:
   destinations:
     - namespace: signaltrade-staging
       server: https://kubernetes.default.svc
+    - namespace: signaltrade-node-metrics-staging
+      server: https://kubernetes.default.svc
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace

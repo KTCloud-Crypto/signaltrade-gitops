@@ -10,6 +10,7 @@ spec:
     helm:
       parameters:
         - {name: namespace, value: signaltrade-staging}
+        - {name: nodeExporterNamespace, value: signaltrade-node-metrics-staging}
         - {name: environment, value: staging}
   destination: {server: https://kubernetes.default.svc, namespace: signaltrade-staging}
   syncPolicy:

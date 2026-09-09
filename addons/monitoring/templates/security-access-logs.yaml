@@ -47,8 +47,8 @@ data:
           .client_ip = client.client_ip
           .method = .request_verb
           .path = request.path
-          .status_code = to_string(.elb_status_code) ?? "-"
-          .request_id = .trace_id ?? "-"
+          .status_code = to_string(.elb_status_code)
+          .request_id = .trace_id
       cloudfront_access_logs:
         type: remap
         inputs: [aws_access_logs]
