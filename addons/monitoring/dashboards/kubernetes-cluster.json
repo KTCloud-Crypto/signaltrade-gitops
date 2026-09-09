@@ -1,0 +1,110 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "red", "value": 1}]}}, "overrides": []},
+      "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0},
+      "id": 1,
+      "targets": [{"expr": "sum(kube_deployment_spec_replicas{namespace=\"$namespace\"} - kube_deployment_status_replicas_available{namespace=\"$namespace\"})", "refId": "A"}],
+      "title": "Unavailable Deployment Replicas",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "red", "value": 1}]}}, "overrides": []},
+      "gridPos": {"h": 5, "w": 6, "x": 6, "y": 0},
+      "id": 2,
+      "targets": [{"expr": "sum(kube_pod_container_status_waiting_reason{namespace=\"$namespace\",reason=\"CrashLoopBackOff\"})", "refId": "A"}],
+      "title": "CrashLoopBackOff Containers",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "orange", "value": 1}]}}, "overrides": []},
+      "gridPos": {"h": 5, "w": 6, "x": 12, "y": 0},
+      "id": 3,
+      "targets": [{"expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"$namespace\"}[1h]))", "refId": "A"}],
+      "title": "Container Restarts (1h)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "orange", "value": 1}]}}, "overrides": []},
+      "gridPos": {"h": 5, "w": 6, "x": 18, "y": 0},
+      "id": 4,
+      "targets": [{"expr": "sum(kube_pod_status_phase{namespace=\"$namespace\",phase=~\"Pending|Unknown|Failed\"})", "refId": "A"}],
+      "title": "Non-running Pods",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "percentunit"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 5},
+      "id": 5,
+      "targets": [{"expr": "1 - avg by (node) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))", "legendFormat": "{{node}}", "refId": "A"}],
+      "title": "Node CPU Usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "percentunit"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 5},
+      "id": 6,
+      "targets": [{"expr": "1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)", "legendFormat": "{{node}}", "refId": "A"}],
+      "title": "Node Memory Usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "percentunit"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 5},
+      "id": 7,
+      "targets": [{"expr": "1 - (node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay\"})", "legendFormat": "{{node}} {{mountpoint}}", "refId": "A"}],
+      "title": "Node Filesystem Usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "cores"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 13},
+      "id": 8,
+      "targets": [{"expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",image!=\"\"}[5m]))", "legendFormat": "{{pod}}", "refId": "A"}],
+      "title": "Pod CPU Usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 13},
+      "id": 9,
+      "targets": [{"expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",image!=\"\"})", "legendFormat": "{{pod}}", "refId": "A"}],
+      "title": "Pod Memory Working Set",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": ["signaltrade", "kubernetes"],
+  "templating": {
+    "list": [
+      {
+        "current": {"text": "signaltrade-staging", "value": "signaltrade-staging"},
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "definition": "label_values(kube_pod_info, namespace)",
+        "label": "Namespace",
+        "name": "namespace",
+        "query": {"query": "label_values(kube_pod_info, namespace)", "refId": "PrometheusVariableQueryEditor-VariableQuery"},
+        "refresh": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {"from": "now-6h", "to": "now"},
+  "timezone": "browser",
+  "title": "SignalTrade Kubernetes 클러스터",
+  "uid": "signaltrade-kubernetes",
+  "version": 1
+}

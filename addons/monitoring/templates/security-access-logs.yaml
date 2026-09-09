@@ -1,0 +1,138 @@
+{{- if .Values.securityAccessLogs.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: security-log-collector
+  namespace: {{ .Values.namespace }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: security-log-collector-config
+  namespace: {{ .Values.namespace }}
+data:
+  vector.yaml: |
+    api:
+      enabled: true
+      address: 0.0.0.0:8686
+    acknowledgements:
+      enabled: true
+    sources:
+      aws_access_logs:
+        type: aws_s3
+        region: {{ .Values.awsRegion | quote }}
+        compression: auto
+        sqs:
+          queue_url: {{ .Values.securityAccessLogs.queueUrl | quote }}
+          poll_secs: 15
+          visibility_timeout_secs: 300
+          delete_message: true
+    transforms:
+      alb_access_logs:
+        type: remap
+        inputs: [aws_access_logs]
+        drop_on_abort: true
+        source: |
+          if !contains(string!(.object), "/elasticloadbalancing/") { abort }
+          metadata = {"bucket": .bucket, "object": .object, "region": .region}
+          parsed = parse_aws_alb_log!(string!(.message), strict_mode: false)
+          request = parse_url!(string!(parsed.request_url))
+          client = parse_regex(string!(parsed.client_host), r'^(?P<client_ip>.*):(?P<client_port>[0-9]+)$') ?? {"client_ip": parsed.client_host}
+          . = merge(parsed, metadata)
+          .event = "http_request_completed"
+          .source = "alb"
+          .log_type = "security_access"
+          .environment = {{ .Values.environment | quote }}
+          .service = "edge-alb"
+          .client_ip = client.client_ip
+          .method = .request_verb
+          .path = request.path
+          .status_code = to_string(.elb_status_code) ?? "-"
+          .request_id = .trace_id ?? "-"
+      cloudfront_access_logs:
+        type: remap
+        inputs: [aws_access_logs]
+        drop_on_abort: true
+        source: |
+          if !starts_with(string!(.object), "cloudfront/") && !contains(string!(.object), "/CloudFront/") { abort }
+          if starts_with(string!(.message), "#") { abort }
+          fields = parse_csv!(string!(.message), delimiter: "\t")
+          if length(fields) < 15 { abort }
+          .event = "http_request_completed"
+          .source = "cloudfront"
+          .log_type = "security_access"
+          .environment = {{ .Values.environment | quote }}
+          .service = "edge-cloudfront"
+          .date = fields[0]
+          .time = fields[1]
+          .edge_location = fields[2]
+          .client_ip = fields[4]
+          .method = fields[5]
+          .host = fields[6]
+          .path = fields[7]
+          .status_code = fields[8]
+          .referer = fields[9]
+          .user_agent = fields[10]
+          .query = fields[11]
+          .result_type = fields[13]
+          .request_id = fields[14]
+    sinks:
+      loki_alb_access:
+        type: loki
+        inputs: [alb_access_logs]
+        endpoint: http://loki:3100
+        encoding:
+          codec: json
+        labels:
+          service: edge-alb
+          environment: {{ .Values.environment | quote }}
+          log_type: security_access
+          source: alb
+        acknowledgements:
+          enabled: true
+      loki_cloudfront_access:
+        type: loki
+        inputs: [cloudfront_access_logs]
+        endpoint: http://loki:3100
+        encoding:
+          codec: json
+        labels:
+          service: edge-cloudfront
+          environment: {{ .Values.environment | quote }}
+          log_type: security_access
+          source: cloudfront
+        acknowledgements:
+          enabled: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: security-log-collector
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector: {matchLabels: {app.kubernetes.io/name: security-log-collector}}
+  template:
+    metadata: {labels: {app.kubernetes.io/name: security-log-collector}}
+    spec:
+      serviceAccountName: security-log-collector
+      automountServiceAccountToken: true
+      securityContext: {runAsNonRoot: true, runAsUser: 65532, runAsGroup: 65532, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: vector
+          image: {{ .Values.securityAccessLogs.vectorImage }}
+          args: ["--config-yaml", "/etc/vector/vector.yaml"]
+          env:
+            - {name: AWS_REGION, value: {{ .Values.awsRegion | quote }}}
+          ports: [{name: api, containerPort: 8686}]
+          volumeMounts:
+            - {name: config, mountPath: /etc/vector, readOnly: true}
+            - {name: data, mountPath: /var/lib/vector}
+          readinessProbe: {httpGet: {path: /health, port: api}, initialDelaySeconds: 10, periodSeconds: 10}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: ["ALL"]}}
+          resources: {requests: {cpu: 30m, memory: 64Mi}, limits: {cpu: 250m, memory: 256Mi}}
+      volumes:
+        - {name: config, configMap: {name: security-log-collector-config}}
+        - {name: data, emptyDir: {sizeLimit: 256Mi}}
+{{- end }}

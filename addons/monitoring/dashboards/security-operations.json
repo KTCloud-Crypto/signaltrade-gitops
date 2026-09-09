@@ -2,7 +2,7 @@
   "id": null,
   "uid": "signaltrade-security-operations",
   "title": "SignalTrade 보안 운영",
-  "description": "Backend까지 도달한 취약점 탐색 요청, 인증·권한 오류, 공격 원천 IP와 보안 감사 이벤트를 추적합니다. CloudFront 또는 WAF에서 차단된 요청은 별도 엣지 로그 연동이 필요합니다.",
+  "description": "ALB 로그로 Backend 도달 여부를 확인하고 CloudFront 로그로 실제 원천 IP를 분석합니다. 두 계층의 동일 요청을 단순 합산하지 않으며 애플리케이션 보안 지표를 함께 확인합니다.",
   "tags": ["signaltrade", "security", "operations"],
   "timezone": "browser",
   "schemaVersion": 41,
@@ -51,10 +51,10 @@
   "panels": [
     {
       "type": "stat",
-      "title": "의심 경로 요청 (1시간)",
-      "description": "최근 1시간 동안 .env, .git, wp-admin, phpinfo 등 알려진 취약 파일·관리 경로를 탐색한 요청입니다. Backend에 실제 도달한 요청만 집계합니다.",
+      "title": "Backend 도달 의심 경로 (1시간)",
+      "description": "ALB가 최근 1시간 동안 Backend로 전달한 .env, .git, wp-admin, phpinfo 등 취약 파일·관리 경로 탐색 요청입니다.",
       "datasource": {"uid": "loki", "type": "loki"},
-      "targets": [{"expr": "sum(count_over_time({service=~\"identity-api|strategy-api|trading-api|portfolio-api\",log_type=\"operation\",environment=~\"$environment\"} | json | event=\"http_request_completed\" | client_ip=~\"$client_ip\" | path=~\"${suspicious_path:raw}\" [1h]))", "instant": true, "refId": "A"}],
+      "targets": [{"expr": "sum(count_over_time({service=\"edge-alb\",source=\"alb\",log_type=\"security_access\",environment=~\"$environment\"} | json | event=\"http_request_completed\" | path=~\"${suspicious_path:raw}\" [1h]))", "instant": true, "refId": "A"}],
       "fieldConfig": {"defaults": {"min": 0, "unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1}, {"color": "red", "value": 10}]}}},
       "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "center", "textMode": "auto", "wideLayout": true},
       "gridPos": {"x": 0, "y": 0, "w": 6, "h": 5}
@@ -112,9 +112,9 @@
     {
       "type": "bargauge",
       "title": "의심 경로 상위 10개",
-      "description": "선택 시간 범위에 가장 많이 탐색된 취약 파일·관리 경로입니다. 새 경로가 반복되면 탐지 정규식과 차단 정책 후보에 추가합니다.",
+      "description": "ALB까지 도달한 요청 중 가장 많이 탐색된 취약 파일·관리 경로입니다. 새 경로가 반복되면 탐지 규칙과 차단 정책 후보에 추가합니다.",
       "datasource": {"uid": "loki", "type": "loki"},
-      "targets": [{"expr": "topk(10, sum by (path) (count_over_time({service=~\"identity-api|strategy-api|trading-api|portfolio-api\",log_type=\"operation\",environment=~\"$environment\"} | json | event=\"http_request_completed\" | client_ip=~\"$client_ip\" | path=~\"${suspicious_path:raw}\" [$__range])))", "instant": true, "legendFormat": "{{path}}", "refId": "A"}],
+      "targets": [{"expr": "topk(10, sum by (path) (count_over_time({service=\"edge-alb\",source=\"alb\",log_type=\"security_access\",environment=~\"$environment\"} | json | event=\"http_request_completed\" | path=~\"${suspicious_path:raw}\" [$__range])))", "instant": true, "legendFormat": "{{path}}", "refId": "A"}],
       "fieldConfig": {"defaults": {"min": 0, "unit": "short", "color": {"mode": "continuous-GrYlRd"}}},
       "options": {"displayMode": "gradient", "orientation": "horizontal", "showUnfilled": true, "valueMode": "color", "namePlacement": "left", "valuePlacement": "right"},
       "gridPos": {"x": 0, "y": 13, "w": 8, "h": 8}
@@ -122,47 +122,47 @@
     {
       "type": "bargauge",
       "title": "스캐너 IP 상위 10개",
-      "description": "의심 경로를 가장 많이 요청한 원천 IP입니다. CloudFront 사용 시 애플리케이션이 신뢰하는 전달 헤더 설정도 함께 확인해야 합니다.",
+      "description": "CloudFront에서 관측한 실제 Viewer IP 중 의심 경로 요청이 많은 순서입니다. Backend 도달 여부는 같은 시간대의 ALB 의심 경로 패널과 함께 판단합니다.",
       "datasource": {"uid": "loki", "type": "loki"},
-      "targets": [{"expr": "topk(10, sum by (client_ip) (count_over_time({service=~\"identity-api|strategy-api|trading-api|portfolio-api\",log_type=\"operation\",environment=~\"$environment\"} | json | event=\"http_request_completed\" | client_ip!=\"\" | client_ip=~\"$client_ip\" | path=~\"${suspicious_path:raw}\" [$__range])))", "instant": true, "legendFormat": "{{client_ip}}", "refId": "A"}],
+      "targets": [{"expr": "topk(10, sum by (client_ip) (count_over_time({service=\"edge-cloudfront\",source=\"cloudfront\",log_type=\"security_access\",environment=~\"$environment\"} | json | event=\"http_request_completed\" | client_ip!=\"\" | client_ip=~\"$client_ip\" | path=~\"${suspicious_path:raw}\" [$__range])))", "instant": true, "legendFormat": "{{client_ip}}", "refId": "A"}],
       "fieldConfig": {"defaults": {"min": 0, "unit": "short", "color": {"mode": "continuous-GrYlRd"}}},
       "options": {"displayMode": "gradient", "orientation": "horizontal", "showUnfilled": true, "valueMode": "color", "namePlacement": "left", "valuePlacement": "right"},
       "gridPos": {"x": 8, "y": 13, "w": 8, "h": 8}
     },
     {
       "type": "bargauge",
-      "title": "로그인 실패 IP 상위 10개",
-      "description": "로그인 실패 감사 이벤트가 많은 IP입니다. 단일 IP 집중은 무차별 대입, 다수 IP 분산은 분산형 공격 가능성을 살펴봅니다.",
+      "title": "인증·권한 오류 IP 상위 10개",
+      "description": "CloudFront에서 관측한 401 또는 403 응답의 실제 Viewer IP입니다. 로그인 실패뿐 아니라 만료된 인증과 권한 탐색 요청도 포함됩니다.",
       "datasource": {"uid": "loki", "type": "loki"},
-      "targets": [{"expr": "topk(10, sum by (client_ip) (count_over_time({service=~\"identity-api|strategy-api|trading-api|portfolio-api\",log_type=\"security\",environment=~\"$environment\"} | json | event=\"login_attempt\" | outcome=\"failure\" | client_ip!=\"\" | client_ip=~\"$client_ip\" [$__range])))", "instant": true, "legendFormat": "{{client_ip}}", "refId": "A"}],
+      "targets": [{"expr": "topk(10, sum by (client_ip) (count_over_time({service=\"edge-cloudfront\",source=\"cloudfront\",log_type=\"security_access\",environment=~\"$environment\"} | json | status_code=~\"401|403\" | client_ip!=\"\" | client_ip=~\"$client_ip\" [$__range])))", "instant": true, "legendFormat": "{{client_ip}}", "refId": "A"}],
       "fieldConfig": {"defaults": {"min": 0, "unit": "short", "color": {"mode": "continuous-GrYlRd"}}},
       "options": {"displayMode": "gradient", "orientation": "horizontal", "showUnfilled": true, "valueMode": "color", "namePlacement": "left", "valuePlacement": "right"},
       "gridPos": {"x": 16, "y": 13, "w": 8, "h": 8}
     },
     {
       "type": "logs",
-      "title": "최근 의심 경로 요청",
-      "description": "요청 시각, 원천 IP, 상태 코드, 메서드와 원본 경로입니다. 동일 IP·경로의 반복성과 응답 상태를 확인합니다.",
+      "title": "최근 CloudFront 의심 경로 요청",
+      "description": "CloudFront에서 관측한 요청 시각, 실제 Viewer IP, 상태 코드, 메서드와 경로입니다. Backend 도달 여부는 ALB 패널과 시간·경로를 함께 확인합니다.",
       "datasource": {"uid": "loki", "type": "loki"},
-      "targets": [{"expr": "{service=~\"identity-api|strategy-api|trading-api|portfolio-api\",log_type=\"operation\",environment=~\"$environment\"} | json | event=\"http_request_completed\" | client_ip=~\"$client_ip\" | request_id=~\"$request_id\" | path=~\"${suspicious_path:raw}\" | line_format \"IP={{.client_ip}} status={{.status_code}} {{.method}} {{.path}} request_id={{.request_id}}\"", "queryType": "range", "refId": "A"}],
+      "targets": [{"expr": "{service=\"edge-cloudfront\",source=\"cloudfront\",log_type=\"security_access\",environment=~\"$environment\"} | json | event=\"http_request_completed\" | client_ip=~\"$client_ip\" | request_id=~\"$request_id\" | path=~\"${suspicious_path:raw}\" | line_format \"IP={{.client_ip}} status={{.status_code}} {{.method}} {{.path}} request_id={{.request_id}}\"", "queryType": "range", "refId": "A"}],
       "options": {"showTime": true, "showLabels": false, "showCommonLabels": false, "wrapLogMessage": true, "prettifyLogMessage": false, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"},
       "gridPos": {"x": 0, "y": 21, "w": 12, "h": 10}
     },
     {
       "type": "logs",
-      "title": "최근 로그인 실패",
-      "description": "실패 원인(detail), 계정 식별값, IP와 User-Agent를 확인합니다. 연속 실패 후 성공 전환도 함께 추적합니다.",
+      "title": "최근 인증·권한 오류",
+      "description": "401·403 응답의 원천 IP, 요청 경로, User-Agent와 요청 ID를 확인합니다.",
       "datasource": {"uid": "loki", "type": "loki"},
-      "targets": [{"expr": "{service=~\"identity-api|strategy-api|trading-api|portfolio-api\",log_type=\"security\",environment=~\"$environment\"} | json | event=\"login_attempt\" | outcome=\"failure\" | client_ip=~\"$client_ip\" | request_id=~\"$request_id\" | line_format \"IP={{.client_ip}} account={{.actor_key}} reason={{.detail}} user_agent={{.user_agent}} request_id={{.request_id}}\"", "queryType": "range", "refId": "A"}],
+      "targets": [{"expr": "{service=\"edge-cloudfront\",source=\"cloudfront\",log_type=\"security_access\",environment=~\"$environment\"} | json | status_code=~\"401|403\" | client_ip=~\"$client_ip\" | request_id=~\"$request_id\" | line_format \"IP={{.client_ip}} status={{.status_code}} {{.method}} {{.path}} user_agent={{.user_agent}} request_id={{.request_id}}\"", "queryType": "range", "refId": "A"}],
       "options": {"showTime": true, "showLabels": false, "showCommonLabels": false, "wrapLogMessage": true, "prettifyLogMessage": false, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"},
       "gridPos": {"x": 12, "y": 21, "w": 12, "h": 10}
     },
     {
       "type": "logs",
-      "title": "최근 보안 감사 로그",
-      "description": "계정 생성, 비밀번호·거래소 키 변경, 전략 설정, 수동 매도 등 보안상 추적해야 하는 행위를 시간순으로 확인합니다.",
+      "title": "최근 HTTP 오류 접근 로그",
+      "description": "CloudFront의 4xx·5xx 응답을 시간순으로 보여줍니다. 실제 Viewer IP·경로·상태 코드를 이용해 탐색이나 장애를 구분합니다.",
       "datasource": {"uid": "loki", "type": "loki"},
-      "targets": [{"expr": "{service=~\"identity-api|strategy-api|trading-api|portfolio-api\",log_type=\"security\",environment=~\"$environment\"} | json | client_ip=~\"$client_ip\" | request_id=~\"$request_id\" | line_format \"event={{.event}} outcome={{.outcome}} user={{.actor_user_id}} IP={{.client_ip}} resource={{.resource_type}}/{{.resource_id}} detail={{.detail}} request_id={{.request_id}}\"", "queryType": "range", "refId": "A"}],
+      "targets": [{"expr": "{service=\"edge-cloudfront\",source=\"cloudfront\",log_type=\"security_access\",environment=~\"$environment\"} | json | status_code=~\"4..|5..\" | client_ip=~\"$client_ip\" | request_id=~\"$request_id\" | line_format \"IP={{.client_ip}} status={{.status_code}} {{.method}} {{.path}} result={{.result_type}} request_id={{.request_id}}\"", "queryType": "range", "refId": "A"}],
       "options": {"showTime": true, "showLabels": false, "showCommonLabels": false, "wrapLogMessage": true, "prettifyLogMessage": false, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"},
       "gridPos": {"x": 0, "y": 31, "w": 24, "h": 11}
     }

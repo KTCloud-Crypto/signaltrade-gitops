@@ -1,5 +1,10 @@
 namespace: signaltrade-staging
 environment: staging
-prometheusConfigRevision: "2026-09-07-pod-discovery-v1"
+prometheusConfigRevision: "2026-09-07-kubernetes-metrics-v1"
 awsRegion: us-east-1
 parameterPrefix: /signaltrade/staging/monitoring
+securityAccessLogs:
+  enabled: true
+  bucket: signaltrade-security-access-logs-832496385575
+  queueUrl: https://sqs.us-east-1.amazonaws.com/832496385575/signaltrade-security-log-ingestion-staging
+  vectorImage: timberio/vector:0.55.0-distroless-libc

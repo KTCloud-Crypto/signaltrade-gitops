@@ -23,7 +23,7 @@ kind: ClusterRole
 metadata: {name: signaltrade-prometheus-pod-discovery-{{ .Values.environment }}}
 rules:
   - apiGroups: [""]
-    resources: [pods]
+    resources: [pods, nodes, nodes/metrics, nodes/proxy]
     verbs: [get, list, watch]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -86,6 +86,43 @@ data:
             replacement: {{ .Values.environment | quote }}
       - job_name: postgres
         static_configs: [{targets: ["postgres-exporter:9187"]}]
+      - job_name: kube-state-metrics
+        static_configs: [{targets: ["kube-state-metrics:8080"]}]
+      - job_name: node-exporter
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [{{ .Values.namespace | quote }}]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+            regex: node-exporter
+            action: keep
+          - source_labels: [__meta_kubernetes_pod_container_port_name]
+            regex: metrics
+            action: keep
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            target_label: node
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - target_label: environment
+            replacement: {{ .Values.environment | quote }}
+      - job_name: kubernetes-cadvisor
+        scheme: https
+        kubernetes_sd_configs:
+          - role: node
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        relabel_configs:
+          - target_label: __address__
+            replacement: kubernetes.default.svc:443
+          - source_labels: [__meta_kubernetes_node_name]
+            target_label: node
+          - source_labels: [__meta_kubernetes_node_name]
+            target_label: __metrics_path__
+            replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
+          - target_label: environment
+            replacement: {{ .Values.environment | quote }}
       - job_name: prometheus
         static_configs: [{targets: ["prometheus:9090"]}]
       - job_name: loki
@@ -121,6 +158,27 @@ data:
             annotations:
               summary: "External API failures are elevated"
               description: "{{`{{ $labels.provider }}`}}/{{`{{ $labels.operation }}`}} failed {{`{{ $value }}`}} times in 10 minutes."
+          - alert: KubernetesPodCrashLooping
+            expr: max_over_time(kube_pod_container_status_waiting_reason{namespace={{ .Values.namespace | quote }},reason="CrashLoopBackOff"}[5m]) >= 1
+            for: 5m
+            labels: {severity: warning}
+            annotations:
+              summary: "Kubernetes Pod is crash looping"
+              description: "{{`{{ $labels.pod }}`}}/{{`{{ $labels.container }}`}} is in CrashLoopBackOff."
+          - alert: KubernetesDeploymentReplicasUnavailable
+            expr: kube_deployment_status_replicas_available{namespace={{ .Values.namespace | quote }}} < kube_deployment_spec_replicas{namespace={{ .Values.namespace | quote }}}
+            for: 10m
+            labels: {severity: critical}
+            annotations:
+              summary: "Kubernetes Deployment has unavailable replicas"
+              description: "{{`{{ $labels.deployment }}`}} has fewer available replicas than desired."
+          - alert: KubernetesNodeFilesystemLow
+            expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) < 0.15
+            for: 15m
+            labels: {severity: warning}
+            annotations:
+              summary: "Kubernetes node filesystem space is low"
+              description: "{{`{{ $labels.instance }}`}} {{`{{ $labels.mountpoint }}`}} has less than 15% free space."
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -431,7 +489,7 @@ metadata: {name: observability-allow-required, namespace: {{ .Values.namespace }
 spec:
   podSelector:
     matchExpressions:
-      - {key: app.kubernetes.io/name, operator: In, values: [grafana, prometheus, loki, alloy, postgres-exporter]}
+      - {key: app.kubernetes.io/name, operator: In, values: [grafana, prometheus, loki, alloy, postgres-exporter, kube-state-metrics, node-exporter, security-log-collector]}
   policyTypes: [Ingress, Egress]
   ingress:
     - from:
@@ -453,5 +511,15 @@ spec:
         - {protocol: TCP, port: 5432}
     - to:
         - ipBlock: {cidr: 10.100.0.1/32}
+      ports:
+        - {protocol: TCP, port: 443}
+    # EKS Pod Identity Agent credential endpoint.
+    - to:
+        - ipBlock: {cidr: 169.254.170.23/32}
+      ports:
+        - {protocol: TCP, port: 80}
+    # AWS S3, SQS and STS public endpoints through the private subnet NAT gateway.
+    - to:
+        - ipBlock: {cidr: 0.0.0.0/0}
       ports:
         - {protocol: TCP, port: 443}

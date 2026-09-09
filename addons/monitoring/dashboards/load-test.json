@@ -534,22 +534,26 @@
     },
     {
       "type": "timeseries",
-      "title": "DB 쿼리 p95",
-      "description": "애플리케이션에서 계측한 DB 작업별 p95 처리시간입니다. API p95와 동시에 상승하면 데이터베이스가 병목일 가능성이 큽니다.",
+      "title": "DB 초당 트랜잭션",
+      "description": "PostgreSQL exporter가 보고하는 초당 commit·rollback 수입니다. 부하 증가 시 DB 처리량과 rollback 증가 여부를 확인합니다.",
       "datasource": {
         "uid": "prometheus",
         "type": "prometheus"
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(signaltrade_database_query_duration_seconds_bucket[1m])))",
-          "legendFormat": "{{operation}}"
+          "expr": "sum(rate(pg_stat_database_xact_commit{datname=\"signaltrade\"}[1m]))",
+          "legendFormat": "commit/s"
+        },
+        {
+          "expr": "sum(rate(pg_stat_database_xact_rollback{datname=\"signaltrade\"}[1m]))",
+          "legendFormat": "rollback/s"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "min": 0,
-          "unit": "s"
+          "unit": "ops"
         }
       },
       "options": {

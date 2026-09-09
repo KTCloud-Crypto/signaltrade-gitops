@@ -7,13 +7,13 @@
     {
       "type": "stat",
       "title": "백엔드 상태",
-      "description": "- **무엇을 측정하는가**: Prometheus의 Backend API 메트릭 수집 상태입니다.\n\n- **정상 범위**: 정상으로 표시되는 상태입니다.\n\n- **값이 없을 때 의미**: Backend 수집 대상이 등록되지 않았거나 Prometheus가 수집하지 못한 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: Backend 컨테이너 상태·/metrics·Prometheus Targets를 확인합니다.",
+      "description": "- **무엇을 측정하는가**: API Pod 수집 상태를 서비스별 최솟값으로 집계합니다. replica가 여러 개여도 서비스당 하나의 상태가 표시됩니다.\n\n- **정상 범위**: identity·strategy·trading·portfolio 4개 서비스가 모두 정상입니다.\n\n- **값이 없을 때 의미**: API 수집 대상이 등록되지 않았거나 Prometheus가 수집하지 못한 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: API Pod 상태·/metrics·Prometheus Targets를 확인합니다.",
       "datasource": {
         "uid": "prometheus"
       },
       "targets": [
         {
-          "expr": "up{job=~\"identity-api|strategy-api|trading-api|portfolio-api\"}",
+          "expr": "min by (job) (up{job=~\"identity-api|strategy-api|trading-api|portfolio-api\"})",
           "instant": true,
           "range": false
         }
@@ -69,13 +69,13 @@
     {
       "type": "stat",
       "title": "전략 Worker 상태",
-      "description": "- **무엇을 측정하는가**: Worker의 9101 메트릭 서버 수집 상태입니다.\n\n- **정상 범위**: 정상으로 표시되는 상태입니다.\n\n- **값이 없을 때 의미**: Worker 수집 대상이 등록되지 않았거나 Prometheus가 수집하지 못한 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: strategy-worker 컨테이너·9101 포트·Prometheus Targets를 확인합니다.",
+      "description": "- **무엇을 측정하는가**: Worker Pod 수집 상태를 서비스별 최솟값으로 집계합니다.\n\n- **정상 범위**: strategy·trading·portfolio·notification·messaging 5개 Worker가 모두 정상입니다.\n\n- **값이 없을 때 의미**: Worker 수집 대상이 등록되지 않았거나 Prometheus가 수집하지 못한 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: Worker Pod·metrics 포트·Prometheus Targets를 확인합니다.",
       "datasource": {
         "uid": "prometheus"
       },
       "targets": [
         {
-          "expr": "up{job=\"strategy-worker\"}",
+          "expr": "min by (job) (up{job=~\"strategy-worker|trading-worker|portfolio-worker|notification-worker|messaging-worker\"})",
           "instant": true,
           "range": false
         }
@@ -288,11 +288,11 @@
       "targets": [
         {
           "expr": "increase(signaltrade_worker_task_runs_total{task=\"order_reconciliation\",result=\"success\"}[5m])",
-          "legendFormat": "주문 상태 확인 · 성공"
+          "legendFormat": "미체결 주문 동기화 · 성공"
         },
         {
           "expr": "increase(signaltrade_worker_task_runs_total{task=\"order_reconciliation\",result=\"error\"}[5m])",
-          "legendFormat": "주문 상태 확인 · 실패"
+          "legendFormat": "미체결 주문 동기화 · 실패"
         },
         {
           "expr": "increase(signaltrade_worker_task_runs_total{task=\"position_monitor\",result=\"success\"}[5m])",
@@ -334,7 +334,7 @@
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum by (le) (rate(signaltrade_worker_task_duration_seconds_bucket{task=\"order_reconciliation\"}[5m])))",
-          "legendFormat": "주문 상태 확인"
+          "legendFormat": "미체결 주문 동기화"
         },
         {
           "expr": "histogram_quantile(0.95, sum by (le) (rate(signaltrade_worker_task_duration_seconds_bucket{task=\"position_monitor\"}[5m])))",
@@ -354,8 +354,8 @@
     },
     {
       "type": "stat",
-      "title": "주문 상태 확인 · 마지막 성공",
-      "description": "- **무엇을 측정하는가**: 미체결 주문 상태 확인 작업의 마지막 성공 이후 경과시간입니다.\n\n- **정상 범위**: 15초 미만 정상, 15초 이상 주의, 30초 이상 위험입니다.\n\n- **값이 없을 때 의미**: 배포 후 아직 성공하지 않았거나 Worker 메트릭 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: 주문 상태 확인 실패 수와 strategy-worker 로그를 확인합니다.",
+      "title": "미체결 주문 동기화 · 마지막 성공",
+      "description": "- **무엇을 측정하는가**: Trading Worker가 거래소의 미체결 주문 상태를 마지막으로 동기화한 이후 경과시간입니다. 실제 매수·매도 주문 체결 시각을 의미하지 않습니다.\n\n- **정상 범위**: 15초 미만 정상, 15초 이상 주의, 30초 이상 위험입니다.\n\n- **값이 없을 때 의미**: 배포 후 작업이 아직 성공하지 않았거나 Trading Worker 메트릭 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: 미체결 주문 동기화 실패 수와 trading-worker 로그를 확인합니다.",
       "datasource": {
         "uid": "prometheus"
       },
