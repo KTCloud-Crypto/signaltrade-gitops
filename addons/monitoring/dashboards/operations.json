@@ -12,7 +12,7 @@
   ],
   "title": "SignalTrade 운영 모니터링",
   "uid": "signaltrade-operations",
-  "version": 1,
+  "version": 2,
   "refresh": "15s",
   "time": {
     "from": "now-6h",
@@ -21,55 +21,15 @@
   "templating": {
     "list": [
       {
-        "name": "environment",
-        "label": "실행 환경",
+        "name": "pod",
+        "label": "Pod",
         "type": "query",
         "datasource": {
           "uid": "loki",
           "type": "loki"
         },
         "query": {
-          "query": "label_values(environment)",
-          "refId": "LokiVariableQueryEditor-VariableQuery"
-        },
-        "includeAll": true,
-        "allValue": ".+",
-        "current": {
-          "text": "전체",
-          "value": "$__all"
-        },
-        "refresh": 1
-      },
-      {
-        "name": "service",
-        "label": "서비스",
-        "type": "query",
-        "datasource": {
-          "uid": "loki",
-          "type": "loki"
-        },
-        "query": {
-          "query": "label_values(service)",
-          "refId": "LokiVariableQueryEditor-VariableQuery"
-        },
-        "includeAll": true,
-        "allValue": ".+",
-        "current": {
-          "text": "전체",
-          "value": "$__all"
-        },
-        "refresh": 1
-      },
-      {
-        "name": "level",
-        "label": "로그 레벨",
-        "type": "query",
-        "datasource": {
-          "uid": "loki",
-          "type": "loki"
-        },
-        "query": {
-          "query": "label_values(level)",
+          "query": "label_values({namespace=\"signaltrade-staging\"}, pod)",
           "refId": "LokiVariableQueryEditor-VariableQuery"
         },
         "includeAll": true,
@@ -408,302 +368,16 @@
       }
     },
     {
-      "type": "timeseries",
-      "title": "Nginx 4xx·5xx 발생량 (5분)",
-      "description": "- **무엇을 측정하는가**: 최근 5분 Nginx 단계에서 발생한 4xx·5xx 응답 수입니다.\n\n- **정상 범위**: 5xx는 0건이며 4xx가 평소 범위 안인 상태입니다.\n\n- **값이 없을 때 의미**: 오류 응답이 없거나 Nginx 로그 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: Nginx 4xx·5xx 로그와 Backend·frontend 상태를 확인합니다.",
-      "datasource": {
-        "uid": "loki"
-      },
-      "targets": [
-        {
-          "expr": "sum by (status_code) (count_over_time({service=\"frontend\",log_type=\"access\",environment=~\"$environment\"} | json | status_code >= 400 [5m]))",
-          "legendFormat": "상태 코드 {{status_code}}"
-        }
-      ],
-      "gridPos": {
-        "x": 0,
-        "y": 12,
-        "w": 8,
-        "h": 8
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "호스트 CPU 사용률",
-      "description": "- **무엇을 측정하는가**: EC2 호스트 전체 CPU 사용률입니다.\n\n- **정상 범위**: 지속적으로 80% 미만이며 평소 기준선 안인 상태입니다.\n\n- **값이 없을 때 의미**: node-exporter 또는 Prometheus 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: 컨테이너 CPU 상위 10개와 node-exporter 상태를 확인합니다.",
-      "datasource": {
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1
-        }
-      },
-      "targets": [
-        {
-          "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))",
-          "legendFormat": "CPU 사용률"
-        }
-      ],
-      "gridPos": {
-        "x": 8,
-        "y": 12,
-        "w": 8,
-        "h": 8
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "호스트 메모리 사용률",
-      "description": "- **무엇을 측정하는가**: 캐시를 고려한 EC2 호스트 메모리 사용률입니다.\n\n- **정상 범위**: 지속적으로 80% 미만이며 스왑·OOM이 발생하지 않는 상태입니다.\n\n- **값이 없을 때 의미**: node-exporter 또는 Prometheus 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: 컨테이너 메모리 상위 10개와 호스트 OOM 로그를 확인합니다.",
-      "datasource": {
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1
-        }
-      },
-      "targets": [
-        {
-          "expr": "1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes",
-          "legendFormat": "메모리 사용률"
-        }
-      ],
-      "gridPos": {
-        "x": 16,
-        "y": 12,
-        "w": 8,
-        "h": 8
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "호스트 시스템 부하",
-      "description": "- **무엇을 측정하는가**: 호스트의 1·5·15분 평균 실행 대기 작업 수입니다.\n\n- **정상 범위**: CPU 코어 수보다 지속적으로 낮은 상태입니다.\n\n- **값이 없을 때 의미**: node-exporter 또는 Prometheus 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: 호스트 CPU와 컨테이너 CPU 상위 10개를 확인합니다.",
-      "datasource": {
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "node_load1",
-          "legendFormat": "1분 평균"
-        },
-        {
-          "expr": "node_load5",
-          "legendFormat": "5분 평균"
-        },
-        {
-          "expr": "node_load15",
-          "legendFormat": "15분 평균"
-        }
-      ],
-      "gridPos": {
-        "x": 0,
-        "y": 20,
-        "w": 12,
-        "h": 8
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "파일시스템 사용률",
-      "description": "- **무엇을 측정하는가**: 호스트 파일시스템별 디스크 사용률입니다.\n\n- **정상 범위**: 80% 미만을 권장하며 90% 이상은 즉시 조치 대상입니다.\n\n- **값이 없을 때 의미**: node-exporter 수집 중단 또는 대상 마운트가 제외된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: Docker 볼륨·컨테이너 로그·Loki 데이터 사용량을 확인합니다.",
-      "datasource": {
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1
-        }
-      },
-      "targets": [
-        {
-          "expr": "max by (mountpoint) (1 - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\"})",
-          "legendFormat": "{{mountpoint}}"
-        }
-      ],
-      "gridPos": {
-        "x": 12,
-        "y": 20,
-        "w": 12,
-        "h": 8
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "컨테이너 CPU 사용량 상위 10개",
-      "description": "- **무엇을 측정하는가**: CPU 코어 기준 사용량이 높은 컨테이너 10개입니다.\n\n- **정상 범위**: 컨테이너 제한과 평소 기준선 안이며 지속 포화되지 않는 상태입니다.\n\n- **값이 없을 때 의미**: cAdvisor 또는 Prometheus 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: 해당 컨테이너 로그·작업량과 호스트 CPU 사용률을 확인합니다.",
-      "datasource": {
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "cores"
-        }
-      },
-      "targets": [
-        {
-          "expr": "topk(10, sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{namespace=\"signaltrade\",container!=\"\",image!=\"\"}[5m])))",
-          "legendFormat": "{{namespace}} {{pod}}"
-        }
-      ],
-      "gridPos": {
-        "x": 0,
-        "y": 28,
-        "w": 12,
-        "h": 8
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "컨테이너 메모리 사용량 상위 10개",
-      "description": "- **무엇을 측정하는가**: 실제 메모리 사용량이 높은 컨테이너 10개입니다.\n\n- **정상 범위**: 컨테이너 제한과 평소 기준선 안이며 계속 증가하지 않는 상태입니다.\n\n- **값이 없을 때 의미**: cAdvisor 또는 Prometheus 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: 해당 컨테이너의 메모리 제한·OOM·호스트 메모리를 확인합니다.",
-      "datasource": {
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes"
-        }
-      },
-      "targets": [
-        {
-          "expr": "topk(10, sum by (namespace, pod) (container_memory_working_set_bytes{namespace=\"signaltrade\",container!=\"\",image!=\"\"}))",
-          "legendFormat": "{{namespace}} {{pod}}"
-        }
-      ],
-      "gridPos": {
-        "x": 12,
-        "y": 28,
-        "w": 12,
-        "h": 8
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Container Restart (1시간)",
-      "description": "최근 1시간 컨테이너 시작 시각 변경 횟수입니다. cAdvisor 기반 추정값이며 반복 증가하면 컨테이너 로그와 healthcheck를 확인합니다.",
-      "datasource": {
-        "uid": "prometheus",
-        "type": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "min": 0,
-          "unit": "short"
-        }
-      },
-      "targets": [
-        {
-          "expr": "sum by (pod) (changes(container_start_time_seconds{namespace=\"signaltrade\",container!=\"\"}[1h])) or vector(0)",
-          "legendFormat": "{{pod}}"
-        }
-      ],
-      "gridPos": {
-        "x": 0,
-        "y": 36,
-        "w": 12,
-        "h": 7
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Container OOM (1시간)",
-      "description": "최근 1시간 컨테이너 OOM 발생 횟수입니다. 발생 시 메모리 사용량, 제한값, 누수 여부를 확인합니다.",
-      "datasource": {
-        "uid": "prometheus",
-        "type": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "min": 0,
-          "unit": "short"
-        }
-      },
-      "targets": [
-        {
-          "expr": "sum by (pod) (increase(container_oom_events_total{namespace=\"signaltrade\",container!=\"\"}[1h])) or vector(0)",
-          "legendFormat": "{{pod}}"
-        }
-      ],
-      "gridPos": {
-        "x": 12,
-        "y": 36,
-        "w": 12,
-        "h": 7
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "핵심 컨테이너 CPU 비교",
-      "description": "Backend, Worker, PostgreSQL 컨테이너의 CPU 코어 사용량을 비교합니다.",
-      "datasource": {
-        "uid": "prometheus",
-        "type": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "min": 0,
-          "unit": "cores"
-        }
-      },
-      "targets": [
-        {
-          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"signaltrade\",container!=\"\",image!=\"\"}[5m]))",
-          "legendFormat": "{{pod}}"
-        }
-      ],
-      "gridPos": {
-        "x": 0,
-        "y": 43,
-        "w": 12,
-        "h": 8
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "핵심 컨테이너 Memory 비교",
-      "description": "Backend, Worker, PostgreSQL 컨테이너의 working set 메모리를 비교합니다.",
-      "datasource": {
-        "uid": "prometheus",
-        "type": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "min": 0,
-          "unit": "bytes"
-        }
-      },
-      "targets": [
-        {
-          "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"signaltrade\",container!=\"\",image!=\"\"})",
-          "legendFormat": "{{pod}}"
-        }
-      ],
-      "gridPos": {
-        "x": 12,
-        "y": 43,
-        "w": 12,
-        "h": 8
-      }
-    },
-    {
       "type": "logs",
       "title": "애플리케이션 오류 로그",
-      "description": "- **무엇을 측정하는가**: 애플리케이션 서비스의 ERROR·CRITICAL 로그입니다.\n\n- **정상 범위**: 새로운 오류 로그가 없는 상태입니다.\n\n- **값이 없을 때 의미**: 오류가 없거나 Loki 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: 요청 ID·서비스·logger로 필터링하고 관련 컨테이너 로그를 확인합니다.",
+      "description": "- **무엇을 측정하는가**: Kubernetes 애플리케이션 Pod 로그에서 ERROR·CRITICAL·Exception·Traceback 문자열을 탐지합니다.\n\n- **정상 범위**: 새로운 오류 로그가 없는 상태입니다.\n\n- **값이 없을 때 의미**: 오류가 없거나 Loki 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: Pod·요청 ID·사용자 ID로 필터링하고 동일 시점의 API 지표를 확인합니다.",
       "datasource": {
         "uid": "loki"
       },
       "targets": [
         {
-          "expr": "{service=~\"$service\",environment=~\"$environment\",level=~\"ERROR|CRITICAL\"} | json | request_id=~\"$request_id\" | user_id=~\"$user_id\""
+          "expr": "{namespace=\"signaltrade-staging\",pod=~\"$pod\"} |~ \"(?i)error|critical|exception|traceback\" | json | request_id=~\"$request_id\" | user_id=~\"$user_id\"",
+          "refId": "A"
         }
       ],
       "options": {
@@ -713,33 +387,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 51,
-        "w": 12,
-        "h": 10
-      }
-    },
-    {
-      "type": "logs",
-      "title": "Nginx 요청 로그",
-      "description": "Nginx가 처리한 2xx·3xx·4xx·5xx 요청 로그입니다. status_code, upstream_status, request_time_seconds로 요청 결과와 지연 원인을 확인합니다. health와 metrics 경로는 별도 access_log off 설정으로 제외됩니다.",
-      "datasource": {
-        "uid": "loki"
-      },
-      "targets": [
-        {
-          "expr": "{service=\"frontend\",log_type=\"access\",environment=~\"$environment\"} | json | request_id=~\"$request_id\""
-        }
-      ],
-      "options": {
-        "showTime": true,
-        "wrapLogMessage": true,
-        "enableLogDetails": true
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 51,
-        "w": 12,
-        "h": 10
+        "y": 12,
+        "w": 24,
+        "h": 12
       }
     }
   ]
