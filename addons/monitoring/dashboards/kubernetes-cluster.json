@@ -86,8 +86,32 @@
     },
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "fieldConfig": {"defaults": {"unit": "cores"}, "overrides": []},
+      "description": "현재 Kubernetes에 존재하는 Pod의 상태, 실행 시간, 배치 Node와 IP를 표시합니다. 실행 시간은 현재 Pod가 생성된 후 경과한 시간입니다.",
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 21},
+      "id": 15,
+      "options": {"showHeader": true},
+      "targets": [{"expr": "(time() - kube_pod_created{namespace=\"$namespace\"}) * on(namespace,pod) group_left(node,pod_ip,host_ip) kube_pod_info{namespace=\"$namespace\"} * on(namespace,pod) group_left(phase) (kube_pod_status_phase{namespace=\"$namespace\"} == 1)", "format": "table", "instant": true, "refId": "A"}],
+      "title": "현재 활성 Pod",
+      "transformations": [{"id": "organize", "options": {"excludeByName": {"Time": true, "__name__": true, "host_ip": true, "instance": true, "job": true, "namespace": true}, "indexByName": {"pod": 0, "phase": 1, "Value": 2, "node": 3, "pod_ip": 4}, "renameByName": {"pod": "Pod", "phase": "상태", "Value": "실행 시간", "node": "배치 Node", "pod_ip": "Pod IP"}}}],
+      "type": "table"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "선택한 대시보드 시간 범위에는 존재했지만 현재 Kubernetes에서 사라진 Pod입니다. 마지막 관측 이후 경과시간을 보여주며, 원인은 Loki에서 해당 Pod 이름의 과거 로그로 확인할 수 있습니다.",
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 21},
+      "id": 16,
+      "options": {"showHeader": true},
+      "targets": [{"expr": "(time() - max_over_time(timestamp(kube_pod_info{namespace=\"$namespace\"})[$__range:1m])) unless on(namespace,pod) kube_pod_info{namespace=\"$namespace\"}", "format": "table", "instant": true, "refId": "A"}],
+      "title": "최근 사라진 Pod",
+      "transformations": [{"id": "organize", "options": {"excludeByName": {"Time": true, "__name__": true, "host_network": true, "instance": true, "job": true, "namespace": true, "uid": true}, "indexByName": {"pod": 0, "Value": 1, "created_by_kind": 2, "created_by_name": 3, "node": 4, "pod_ip": 5}, "renameByName": {"pod": "사라진 Pod", "Value": "마지막 관측 후 경과", "created_by_kind": "소유 종류", "created_by_name": "소유 리소스", "node": "마지막 배치 Node", "pod_ip": "마지막 Pod IP"}}}],
+      "type": "table"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "cores"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 29},
       "id": 8,
       "targets": [{"expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",image!=\"\"}[5m]))", "legendFormat": "{{pod}}", "refId": "A"}],
       "title": "Pod CPU Usage",
@@ -96,7 +120,7 @@
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
       "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []},
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 21},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 29},
       "id": 9,
       "targets": [{"expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",image!=\"\"})", "legendFormat": "{{pod}}", "refId": "A"}],
       "title": "Pod Memory Working Set",
@@ -105,7 +129,7 @@
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
       "fieldConfig": {"defaults": {}, "overrides": []},
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 29},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 37},
       "id": 10,
       "description": "원하는 replica 수보다 실제 사용 가능한 replica 수가 부족한 Deployment만 표시합니다. deployment 열로 장애 서비스를 바로 식별합니다.",
       "options": {"showHeader": true},
@@ -117,7 +141,7 @@
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
       "fieldConfig": {"defaults": {}, "overrides": []},
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 29},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 37},
       "id": 11,
       "description": "CrashLoopBackOff, 이미지 다운로드 실패, 컨테이너 설정 오류 상태만 표시합니다. pod·container·reason 열로 오류 대상을 식별합니다.",
       "options": {"showHeader": true},
@@ -129,7 +153,7 @@
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
       "fieldConfig": {"defaults": {}, "overrides": []},
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 37},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 45},
       "id": 12,
       "description": "최근 1시간 재시작이 발생한 컨테이너를 횟수순으로 표시합니다. 일시적으로 복구되어 현재 Running인 장애도 찾을 수 있습니다.",
       "options": {"showHeader": true},
@@ -140,7 +164,7 @@
     },
     {
       "datasource": {"type": "loki", "uid": "loki"},
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 37},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 45},
       "id": 13,
       "description": "상단 Pod·Container 필터에서 선택한 대상의 Loki 로그를 최신순으로 표시합니다. 상세 표에서 확인한 이름을 선택해 원인을 추적합니다.",
       "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
@@ -196,5 +220,5 @@
   "timezone": "browser",
   "title": "SignalTrade Kubernetes 클러스터",
   "uid": "signaltrade-kubernetes",
-  "version": 5
+  "version": 6
 }
