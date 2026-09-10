@@ -45,7 +45,7 @@
       "gridPos": {"h": 8, "w": 8, "x": 0, "y": 5},
       "id": 5,
       "description": "EKS Worker Node별 CPU 사용률입니다. 범례는 가용 영역과 EC2 인스턴스 ID로 표시합니다.",
-      "targets": [{"expr": "label_replace(label_replace((1 - avg by (node) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))) * on(node) group_left(provider_id) kube_node_info, \"availability_zone\", \"$1\", \"provider_id\", \"aws:///([^/]+)/.*\"), \"ec2_instance\", \"$1\", \"provider_id\", \".*/(i-[a-z0-9]+)$\")", "legendFormat": "{{availability_zone}} · {{ec2_instance}}", "refId": "A"}],
+      "targets": [{"expr": "label_replace(label_replace((1 - avg by (node) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))) * on(node) group_left(provider_id) kube_node_info, \"availability_zone\", \"$1\", \"provider_id\", \"aws:///([^/]+)/.*\"), \"ec2_instance\", \"$1\", \"provider_id\", \".*/(i-[a-z0-9]+)$\")", "legendFormat": "Worker {{availability_zone}} · {{ec2_instance}}", "refId": "A"}],
       "title": "Node CPU 사용량 (AZ·EC2별)",
       "type": "timeseries"
     },
@@ -55,7 +55,7 @@
       "gridPos": {"h": 8, "w": 8, "x": 8, "y": 5},
       "id": 6,
       "description": "EKS Worker Node별 메모리 사용률입니다. 범례는 가용 영역과 EC2 인스턴스 ID로 표시합니다.",
-      "targets": [{"expr": "label_replace(label_replace((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * on(node) group_left(provider_id) kube_node_info, \"availability_zone\", \"$1\", \"provider_id\", \"aws:///([^/]+)/.*\"), \"ec2_instance\", \"$1\", \"provider_id\", \".*/(i-[a-z0-9]+)$\")", "legendFormat": "{{availability_zone}} · {{ec2_instance}}", "refId": "A"}],
+      "targets": [{"expr": "label_replace(label_replace((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * on(node) group_left(provider_id) kube_node_info, \"availability_zone\", \"$1\", \"provider_id\", \"aws:///([^/]+)/.*\"), \"ec2_instance\", \"$1\", \"provider_id\", \".*/(i-[a-z0-9]+)$\")", "legendFormat": "Worker {{availability_zone}} · {{ec2_instance}}", "refId": "A"}],
       "title": "Node 메모리 사용량 (AZ·EC2별)",
       "type": "timeseries"
     },
@@ -65,14 +65,29 @@
       "gridPos": {"h": 8, "w": 8, "x": 16, "y": 5},
       "id": 7,
       "description": "EKS Worker Node의 파일시스템 사용률입니다. 범례는 가용 영역·EC2 인스턴스 ID·마운트 경로로 표시합니다.",
-      "targets": [{"expr": "label_replace(label_replace((1 - (node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\",mountpoint!~\"/run/credentials/.*\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay\",mountpoint!~\"/run/credentials/.*\"})) * on(node) group_left(provider_id) kube_node_info, \"availability_zone\", \"$1\", \"provider_id\", \"aws:///([^/]+)/.*\"), \"ec2_instance\", \"$1\", \"provider_id\", \".*/(i-[a-z0-9]+)$\")", "legendFormat": "{{availability_zone}} · {{ec2_instance}} · {{mountpoint}}", "refId": "A"}],
+      "targets": [{"expr": "label_replace(label_replace((1 - (node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\",mountpoint!~\"/run/credentials/.*\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay\",mountpoint!~\"/run/credentials/.*\"})) * on(node) group_left(provider_id) kube_node_info, \"availability_zone\", \"$1\", \"provider_id\", \"aws:///([^/]+)/.*\"), \"ec2_instance\", \"$1\", \"provider_id\", \".*/(i-[a-z0-9]+)$\")", "legendFormat": "Worker {{availability_zone}} · {{ec2_instance}} · {{mountpoint}}", "refId": "A"}],
       "title": "Node 파일시스템 사용량 (AZ·EC2별)",
       "type": "timeseries"
     },
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "각 EKS Worker Node에 현재 배치된 Pod를 보여줍니다. Node는 서비스 전용이 아니며 재배포 시 Pod 배치가 달라질 수 있습니다.",
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 13},
+      "id": 14,
+      "options": {"showHeader": true},
+      "targets": [{"expr": "label_replace(label_replace(kube_pod_info{namespace=\"$namespace\"} * on(node) group_left(provider_id) kube_node_info, \"availability_zone\", \"$1\", \"provider_id\", \"aws:///([^/]+)/.*\"), \"ec2_instance\", \"$1\", \"provider_id\", \".*/(i-[a-z0-9]+)$\")", "format": "table", "instant": true, "refId": "A"}],
+      "title": "Worker Node별 실행 Pod 배치",
+      "transformations": [
+        {"id": "organize", "options": {"excludeByName": {"Time": true, "Value": true, "__name__": true, "created_by_kind": true, "created_by_name": true, "host_network": true, "instance": true, "job": true, "namespace": true, "provider_id": true, "uid": true}, "indexByName": {"availability_zone": 0, "ec2_instance": 1, "pod": 2, "pod_ip": 3, "host_ip": 4}, "renameByName": {"availability_zone": "AZ", "ec2_instance": "EC2 Worker", "pod": "실행 Pod", "pod_ip": "Pod IP", "host_ip": "Node IP", "node": "Kubernetes Node"}}},
+        {"id": "sortBy", "options": {"fields": {}, "sort": [{"field": "AZ"}, {"field": "EC2 Worker"}]}}
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
       "fieldConfig": {"defaults": {"unit": "cores"}, "overrides": []},
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 13},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 21},
       "id": 8,
       "targets": [{"expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",image!=\"\"}[5m]))", "legendFormat": "{{pod}}", "refId": "A"}],
       "title": "Pod CPU Usage",
@@ -81,7 +96,7 @@
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
       "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []},
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 13},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 21},
       "id": 9,
       "targets": [{"expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",image!=\"\"})", "legendFormat": "{{pod}}", "refId": "A"}],
       "title": "Pod Memory Working Set",
@@ -90,7 +105,7 @@
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
       "fieldConfig": {"defaults": {}, "overrides": []},
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 21},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 29},
       "id": 10,
       "description": "원하는 replica 수보다 실제 사용 가능한 replica 수가 부족한 Deployment만 표시합니다. deployment 열로 장애 서비스를 바로 식별합니다.",
       "options": {"showHeader": true},
@@ -102,7 +117,7 @@
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
       "fieldConfig": {"defaults": {}, "overrides": []},
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 21},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 29},
       "id": 11,
       "description": "CrashLoopBackOff, 이미지 다운로드 실패, 컨테이너 설정 오류 상태만 표시합니다. pod·container·reason 열로 오류 대상을 식별합니다.",
       "options": {"showHeader": true},
@@ -114,7 +129,7 @@
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
       "fieldConfig": {"defaults": {}, "overrides": []},
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 29},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 37},
       "id": 12,
       "description": "최근 1시간 재시작이 발생한 컨테이너를 횟수순으로 표시합니다. 일시적으로 복구되어 현재 Running인 장애도 찾을 수 있습니다.",
       "options": {"showHeader": true},
@@ -125,7 +140,7 @@
     },
     {
       "datasource": {"type": "loki", "uid": "loki"},
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 29},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 37},
       "id": 13,
       "description": "상단 Pod·Container 필터에서 선택한 대상의 Loki 로그를 최신순으로 표시합니다. 상세 표에서 확인한 이름을 선택해 원인을 추적합니다.",
       "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
@@ -181,5 +196,5 @@
   "timezone": "browser",
   "title": "SignalTrade Kubernetes 클러스터",
   "uid": "signaltrade-kubernetes",
-  "version": 4
+  "version": 5
 }
