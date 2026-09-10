@@ -7,13 +7,13 @@
     {
       "type": "stat",
       "title": "백엔드 상태",
-      "description": "- **무엇을 측정하는가**: API Pod 수집 상태를 서비스별 최솟값으로 집계합니다. replica가 여러 개여도 서비스당 하나의 상태가 표시됩니다.\n\n- **정상 범위**: identity·strategy·trading·portfolio 4개 서비스가 모두 정상입니다.\n\n- **값이 없을 때 의미**: API 수집 대상이 등록되지 않았거나 Prometheus가 수집하지 못한 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: API Pod 상태·/metrics·Prometheus Targets를 확인합니다.",
+      "description": "- **무엇을 측정하는가**: 서비스별 API replica 2개 중 Prometheus가 정상 수집하는 replica 수입니다.\n\n- **정상 범위**: 2개 정상은 초록색, 1개 정상은 노란색 일부 중단, 0개 정상은 빨간색 중단입니다.\n\n- **값이 없을 때 의미**: Deployment 정보를 이용해 누락된 서비스도 0개 정상으로 표시합니다.\n\n- **문제가 생기면 어디를 확인하는가**: API Pod 상태·readiness·/metrics·Prometheus Targets를 확인합니다.",
       "datasource": {
         "uid": "prometheus"
       },
       "targets": [
         {
-          "expr": "label_replace(min by (job) (up{job=~\"identity-api|strategy-api|trading-api|portfolio-api\"}), \"service\", \"$1\", \"job\", \"(.+)-api\")",
+          "expr": "label_replace(clamp_max((sum by (job) (up{job=~\"identity-api|strategy-api|trading-api|portfolio-api\"}) or on(job) label_replace(0 * kube_deployment_spec_replicas{namespace=\"signaltrade-staging\",deployment=~\"identity-api|strategy-api|trading-api|portfolio-api\"}, \"job\", \"$1\", \"deployment\", \"(.+)\")), 2), \"service\", \"$1\", \"job\", \"(.+)-api\")",
           "legendFormat": "{{service}}",
           "instant": true,
           "range": false
@@ -30,6 +30,10 @@
                   "color": "red"
                 },
                 "1": {
+                  "text": "일부 중단",
+                  "color": "yellow"
+                },
+                "2": {
                   "text": "정상",
                   "color": "green"
                 }
@@ -44,8 +48,12 @@
                 "value": null
               },
               {
-                "color": "green",
+                "color": "yellow",
                 "value": 1
+              },
+              {
+                "color": "green",
+                "value": 2
               }
             ]
           },
@@ -639,5 +647,5 @@
   },
   "title": "SignalTrade 서비스 개요",
   "uid": "signaltrade-overview",
-  "version": 2
+  "version": 3
 }
