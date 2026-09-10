@@ -44,8 +44,9 @@
       "fieldConfig": {"defaults": {"unit": "percentunit"}, "overrides": []},
       "gridPos": {"h": 8, "w": 8, "x": 0, "y": 5},
       "id": 5,
-      "targets": [{"expr": "1 - avg by (node) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))", "legendFormat": "{{node}}", "refId": "A"}],
-      "title": "Node CPU Usage",
+      "description": "EKS Worker Node별 CPU 사용률입니다. 범례는 가용 영역과 EC2 인스턴스 ID로 표시합니다.",
+      "targets": [{"expr": "label_replace(label_replace((1 - avg by (node) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))) * on(node) group_left(provider_id) kube_node_info, \"availability_zone\", \"$1\", \"provider_id\", \"aws:///([^/]+)/.*\"), \"ec2_instance\", \"$1\", \"provider_id\", \".*/(i-[a-z0-9]+)$\")", "legendFormat": "{{availability_zone}} · {{ec2_instance}}", "refId": "A"}],
+      "title": "Node CPU 사용량 (AZ·EC2별)",
       "type": "timeseries"
     },
     {
@@ -53,8 +54,9 @@
       "fieldConfig": {"defaults": {"unit": "percentunit"}, "overrides": []},
       "gridPos": {"h": 8, "w": 8, "x": 8, "y": 5},
       "id": 6,
-      "targets": [{"expr": "1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)", "legendFormat": "{{node}}", "refId": "A"}],
-      "title": "Node Memory Usage",
+      "description": "EKS Worker Node별 메모리 사용률입니다. 범례는 가용 영역과 EC2 인스턴스 ID로 표시합니다.",
+      "targets": [{"expr": "label_replace(label_replace((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * on(node) group_left(provider_id) kube_node_info, \"availability_zone\", \"$1\", \"provider_id\", \"aws:///([^/]+)/.*\"), \"ec2_instance\", \"$1\", \"provider_id\", \".*/(i-[a-z0-9]+)$\")", "legendFormat": "{{availability_zone}} · {{ec2_instance}}", "refId": "A"}],
+      "title": "Node 메모리 사용량 (AZ·EC2별)",
       "type": "timeseries"
     },
     {
@@ -62,8 +64,9 @@
       "fieldConfig": {"defaults": {"unit": "percentunit"}, "overrides": []},
       "gridPos": {"h": 8, "w": 8, "x": 16, "y": 5},
       "id": 7,
-      "targets": [{"expr": "1 - (node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay\"})", "legendFormat": "{{node}} {{mountpoint}}", "refId": "A"}],
-      "title": "Node Filesystem Usage",
+      "description": "EKS Worker Node의 파일시스템 사용률입니다. 범례는 가용 영역·EC2 인스턴스 ID·마운트 경로로 표시합니다.",
+      "targets": [{"expr": "label_replace(label_replace((1 - (node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\",mountpoint!~\"/run/credentials/.*\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay\",mountpoint!~\"/run/credentials/.*\"})) * on(node) group_left(provider_id) kube_node_info, \"availability_zone\", \"$1\", \"provider_id\", \"aws:///([^/]+)/.*\"), \"ec2_instance\", \"$1\", \"provider_id\", \".*/(i-[a-z0-9]+)$\")", "legendFormat": "{{availability_zone}} · {{ec2_instance}} · {{mountpoint}}", "refId": "A"}],
+      "title": "Node 파일시스템 사용량 (AZ·EC2별)",
       "type": "timeseries"
     },
     {
@@ -71,9 +74,8 @@
       "fieldConfig": {"defaults": {"unit": "cores"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 13},
       "id": 8,
-      "description": "Pod 이름의 배포 해시를 줄여 서비스 역할과 replica 식별자로 표시합니다. api는 요청 처리 Pod, worker는 백그라운드 작업 Pod입니다.",
-      "targets": [{"expr": "label_replace(label_replace(sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",image!=\"\"}[5m])), \"workload\", \"$1\", \"pod\", \"^(.*)-[a-z0-9]+-[a-z0-9]+$\"), \"replica\", \"$1\", \"pod\", \"^.*-([a-z0-9]+)$\")", "legendFormat": "{{workload}} · replica {{replica}}", "refId": "A"}],
-      "title": "Pod CPU 사용량 (서비스·Replica별)",
+      "targets": [{"expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",image!=\"\"}[5m]))", "legendFormat": "{{pod}}", "refId": "A"}],
+      "title": "Pod CPU Usage",
       "type": "timeseries"
     },
     {
@@ -81,9 +83,8 @@
       "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 12, "y": 13},
       "id": 9,
-      "description": "Pod별 실제 사용 메모리를 서비스 역할과 replica 식별자로 표시합니다. 같은 API의 replica 간 사용량 편차도 비교할 수 있습니다.",
-      "targets": [{"expr": "label_replace(label_replace(sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",image!=\"\"}), \"workload\", \"$1\", \"pod\", \"^(.*)-[a-z0-9]+-[a-z0-9]+$\"), \"replica\", \"$1\", \"pod\", \"^.*-([a-z0-9]+)$\")", "legendFormat": "{{workload}} · replica {{replica}}", "refId": "A"}],
-      "title": "Pod 메모리 사용량 (서비스·Replica별)",
+      "targets": [{"expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",image!=\"\"})", "legendFormat": "{{pod}}", "refId": "A"}],
+      "title": "Pod Memory Working Set",
       "type": "timeseries"
     },
     {
@@ -180,5 +181,5 @@
   "timezone": "browser",
   "title": "SignalTrade Kubernetes 클러스터",
   "uid": "signaltrade-kubernetes",
-  "version": 3
+  "version": 4
 }
