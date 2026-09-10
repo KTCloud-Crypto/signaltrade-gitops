@@ -71,8 +71,9 @@
       "fieldConfig": {"defaults": {"unit": "cores"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 13},
       "id": 8,
-      "targets": [{"expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",image!=\"\"}[5m]))", "legendFormat": "{{pod}}", "refId": "A"}],
-      "title": "Pod CPU Usage",
+      "description": "Pod 이름의 배포 해시를 줄여 서비스 역할과 replica 식별자로 표시합니다. api는 요청 처리 Pod, worker는 백그라운드 작업 Pod입니다.",
+      "targets": [{"expr": "label_replace(label_replace(sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\",container!=\"\",image!=\"\"}[5m])), \"workload\", \"$1\", \"pod\", \"^(.*)-[a-z0-9]+-[a-z0-9]+$\"), \"replica\", \"$1\", \"pod\", \"^.*-([a-z0-9]+)$\")", "legendFormat": "{{workload}} · replica {{replica}}", "refId": "A"}],
+      "title": "Pod CPU 사용량 (서비스·Replica별)",
       "type": "timeseries"
     },
     {
@@ -80,8 +81,9 @@
       "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []},
       "gridPos": {"h": 8, "w": 12, "x": 12, "y": 13},
       "id": 9,
-      "targets": [{"expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",image!=\"\"})", "legendFormat": "{{pod}}", "refId": "A"}],
-      "title": "Pod Memory Working Set",
+      "description": "Pod별 실제 사용 메모리를 서비스 역할과 replica 식별자로 표시합니다. 같은 API의 replica 간 사용량 편차도 비교할 수 있습니다.",
+      "targets": [{"expr": "label_replace(label_replace(sum by (pod) (container_memory_working_set_bytes{namespace=\"$namespace\",container!=\"\",image!=\"\"}), \"workload\", \"$1\", \"pod\", \"^(.*)-[a-z0-9]+-[a-z0-9]+$\"), \"replica\", \"$1\", \"pod\", \"^.*-([a-z0-9]+)$\")", "legendFormat": "{{workload}} · replica {{replica}}", "refId": "A"}],
+      "title": "Pod 메모리 사용량 (서비스·Replica별)",
       "type": "timeseries"
     },
     {
@@ -178,5 +180,5 @@
   "timezone": "browser",
   "title": "SignalTrade Kubernetes 클러스터",
   "uid": "signaltrade-kubernetes",
-  "version": 2
+  "version": 3
 }
