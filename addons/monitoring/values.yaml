@@ -2,7 +2,7 @@ namespace: signaltrade-staging
 nodeExporterNamespace: signaltrade-node-metrics-staging
 environment: staging
 prometheusConfigRevision: "2026-09-09-kubernetes-metrics-v2"
-securityLogCollectorConfigRevision: "2026-09-09-vector-v2"
+securityLogCollectorConfigRevision: "2026-09-10-vector-v3"
 awsRegion: us-east-1
 parameterPrefix: /signaltrade/staging/monitoring
 securityAccessLogs:
