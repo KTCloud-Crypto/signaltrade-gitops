@@ -386,6 +386,17 @@
           }
         }
       },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "valuePlacement": "right",
+        "sizing": "manual",
+        "minVizHeight": 24,
+        "minVizWidth": 12
+      },
       "gridPos": {
         "h": 10,
         "w": 24,
