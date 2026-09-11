@@ -397,7 +397,7 @@
         "valueMode": "color",
         "namePlacement": "auto",
         "valuePlacement": "auto",
-        "sizing": "auto",
+        "sizing": "manual",
         "minVizHeight": 16,
         "minVizWidth": 8
       },
