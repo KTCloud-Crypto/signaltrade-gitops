@@ -395,15 +395,15 @@
         "displayMode": "gradient",
         "showUnfilled": true,
         "valueMode": "color",
-        "namePlacement": "left",
-        "valuePlacement": "right",
+        "namePlacement": "auto",
+        "valuePlacement": "auto",
         "sizing": "auto",
-        "minVizHeight": 12,
+        "minVizHeight": 16,
         "minVizWidth": 8
       },
       "gridPos": {
-        "h": 10,
-        "w": 24,
+        "h": 8,
+        "w": 12,
         "x": 0,
         "y": 31
       }
