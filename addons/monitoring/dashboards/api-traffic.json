@@ -399,7 +399,11 @@
         "valuePlacement": "auto",
         "sizing": "manual",
         "minVizHeight": 16,
-        "minVizWidth": 8
+        "minVizWidth": 8,
+        "text": {
+          "titleSize": 12,
+          "valueSize": 12
+        }
       },
       "gridPos": {
         "h": 8,
