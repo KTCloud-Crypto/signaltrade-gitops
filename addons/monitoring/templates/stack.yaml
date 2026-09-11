@@ -320,7 +320,7 @@ spec:
       containers:
         - name: prometheus
           image: prom/prometheus:v3.8.1
-          args: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus", "--storage.tsdb.retention.time=14d", "--storage.tsdb.retention.size=2GB"]
+          args: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus", "--storage.tsdb.retention.time=14d", "--storage.tsdb.retention.size=2GB", "--web.enable-remote-write-receiver"]
           ports: [{name: http, containerPort: 9090}]
           volumeMounts:
             - {name: config, mountPath: /etc/prometheus, readOnly: true}
