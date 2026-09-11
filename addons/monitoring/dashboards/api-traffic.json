@@ -281,7 +281,7 @@
     {
       "type": "timeseries",
       "title": "Upbit API p95 응답시간",
-      "description": "- **무엇을 측정하는가**: Upbit REST API 작업별 호출시간의 95백분위 값입니다.\n\n- **정상 범위**: 2초 미만을 기본 기준으로 평소 값과 비교합니다.\n\n- **값이 없을 때 의미**: 해당 구간에 Upbit 호출이 없거나 외부 호출 메트릭 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: Upbit 호출 성공·실패 횟수와 Backend·Worker의 Upbit 관련 로그를 확인합니다.",
+      "description": "- **무엇을 측정하는가**: Strategy API가 호출한 Upbit REST API의 최근 5분 p95 응답시간입니다.\n\n- **정상 범위**: 호출이 있을 때 2초 미만을 기본 기준으로 평소 값과 비교합니다.\n\n- **0초의 의미**: 새 Replica가 뜬 뒤 아직 Upbit 호출이 없거나 최근 5분 동안 호출이 없다는 뜻입니다.\n\n- **문제가 생기면 어디를 확인하는가**: Upbit 호출 성공·실패 횟수와 Strategy API의 Upbit 관련 로그를 확인합니다.",
       "datasource": {
         "uid": "prometheus"
       },
@@ -293,8 +293,8 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(signaltrade_external_request_duration_seconds_bucket{provider=\"upbit\"}[5m])))",
-          "legendFormat": "{{operation}}"
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(signaltrade_external_request_duration_seconds_bucket{provider=\"upbit\"}[5m]))) or vector(0)",
+          "legendFormat": "Upbit REST API"
         }
       ],
       "gridPos": {
@@ -307,7 +307,7 @@
     {
       "type": "timeseries",
       "title": "Upbit 호출 성공·실패 횟수",
-      "description": "- **무엇을 측정하는가**: 최근 5분 Upbit API 작업별 호출 결과 횟수입니다.\n\n- **정상 범위**: success가 발생하고 error·timeout·rate_limited·http_error는 0건인 상태입니다.\n\n- **값이 없을 때 의미**: 해당 구간에 Upbit 호출이 없거나 외부 호출 메트릭 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: Upbit API p95와 Backend·Worker의 Upbit 오류 로그를 확인합니다.",
+      "description": "- **무엇을 측정하는가**: Strategy API가 최근 5분 동안 호출한 Upbit REST API의 성공·실패 횟수입니다.\n\n- **정상 범위**: 성공 호출이 처리되고 실패는 0건인 상태입니다.\n\n- **둘 다 0건인 경우**: 새 Replica가 뜬 뒤 아직 Upbit 호출이 없거나 최근 5분 동안 호출이 없다는 뜻입니다.\n\n- **문제가 생기면 어디를 확인하는가**: Upbit API p95와 Strategy API의 Upbit 관련 로그를 확인합니다.",
       "datasource": {
         "uid": "prometheus"
       },
@@ -320,8 +320,12 @@
       },
       "targets": [
         {
-          "expr": "sum by (operation, outcome) (increase(signaltrade_external_requests_total{provider=\"upbit\"}[5m]))",
-          "legendFormat": "{{operation}} · {{outcome}}"
+          "expr": "sum(increase(signaltrade_external_requests_total{provider=\"upbit\",outcome=\"success\"}[5m])) or vector(0)",
+          "legendFormat": "성공"
+        },
+        {
+          "expr": "sum(increase(signaltrade_external_requests_total{provider=\"upbit\",outcome!=\"success\"}[5m])) or vector(0)",
+          "legendFormat": "실패"
         }
       ],
       "gridPos": {
@@ -393,9 +397,9 @@
         "valueMode": "color",
         "namePlacement": "left",
         "valuePlacement": "right",
-        "sizing": "manual",
-        "minVizHeight": 24,
-        "minVizWidth": 12
+        "sizing": "auto",
+        "minVizHeight": 12,
+        "minVizWidth": 8
       },
       "gridPos": {
         "h": 10,
