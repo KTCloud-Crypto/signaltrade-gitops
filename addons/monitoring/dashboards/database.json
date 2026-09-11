@@ -10,7 +10,7 @@
   ],
   "title": "SignalTrade PostgreSQL 모니터링",
   "uid": "signaltrade-postgres",
-  "version": 1,
+  "version": 2,
   "time": {
     "from": "now-6h",
     "to": "now"
@@ -22,13 +22,13 @@
     {
       "type": "stat",
       "title": "PostgreSQL 상태",
-      "description": "- **무엇을 측정하는가**: PostgreSQL exporter가 데이터베이스에 연결 가능한지 측정합니다.\n\n- **정상 범위**: 1(정상)입니다.\n\n- **값이 없을 때 의미**: exporter 또는 Prometheus 수집 대상이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: PostgreSQL·postgres-exporter 컨테이너와 Prometheus Targets를 확인합니다.",
+      "description": "- **무엇을 측정하는가**: EKS의 postgres-exporter가 AWS RDS PostgreSQL에 연결 가능한지 측정합니다.\n\n- **정상 범위**: 1(정상)입니다.\n\n- **값이 없을 때 의미**: postgres-exporter Pod 또는 Prometheus 수집 대상이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: postgres-exporter Pod, RDS 상태·네트워크·DNS, Prometheus Targets를 확인합니다.",
       "datasource": {
         "uid": "prometheus"
       },
       "targets": [
         {
-          "expr": "max(pg_up) or vector(0)"
+          "expr": "max(pg_up{job=\"postgres\"}) or vector(0)"
         }
       ],
       "fieldConfig": {
@@ -60,25 +60,25 @@
     {
       "type": "timeseries",
       "title": "PostgreSQL 연결 상태",
-      "description": "서비스 데이터베이스의 현재 전체 연결 수와 Active, Idle, Idle in transaction 상태를 함께 표시합니다. Idle in transaction이 지속되면 열린 트랜잭션과 애플리케이션 연결 반환을 확인합니다.",
+      "description": "RDS의 SignalTrade 서비스 데이터베이스(fastapi_db) 연결을 Total·Active·Idle·Idle in transaction 상태로 표시합니다. Idle in transaction이 지속되면 열린 트랜잭션과 애플리케이션 연결 반환을 확인합니다.",
       "datasource": {
         "uid": "prometheus"
       },
       "targets": [
         {
-          "expr": "sum(pg_stat_activity_count{datname=\"signaltrade\"}) or vector(0)",
+          "expr": "sum(pg_stat_activity_count{datname=\"fastapi_db\"}) or vector(0)",
           "legendFormat": "Total"
         },
         {
-          "expr": "sum(pg_stat_activity_count{datname=\"signaltrade\",state=\"active\"}) or vector(0)",
+          "expr": "sum(pg_stat_activity_count{datname=\"fastapi_db\",state=\"active\"}) or vector(0)",
           "legendFormat": "Active"
         },
         {
-          "expr": "sum(pg_stat_activity_count{datname=\"signaltrade\",state=\"idle\"}) or vector(0)",
+          "expr": "sum(pg_stat_activity_count{datname=\"fastapi_db\",state=\"idle\"}) or vector(0)",
           "legendFormat": "Idle"
         },
         {
-          "expr": "sum(pg_stat_activity_count{datname=\"signaltrade\",state=\"idle in transaction\"}) or vector(0)",
+          "expr": "sum(pg_stat_activity_count{datname=\"fastapi_db\",state=\"idle in transaction\"}) or vector(0)",
           "legendFormat": "Idle in transaction"
         }
       ],
@@ -92,17 +92,17 @@
     {
       "type": "timeseries",
       "title": "초당 트랜잭션 수",
-      "description": "- **무엇을 측정하는가**: 커밋과 롤백을 포함한 초당 데이터베이스 트랜잭션 수입니다.\n\n- **정상 범위**: 평소 서비스 트래픽 기준선과 비교합니다.\n\n- **값이 없을 때 의미**: 트랜잭션이 없거나 PostgreSQL 메트릭 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: API 트래픽, Backend DB 호출, PostgreSQL 로그를 확인합니다.",
+      "description": "- **무엇을 측정하는가**: fastapi_db에서 발생한 커밋과 롤백의 초당 트랜잭션 수입니다.\n\n- **정상 범위**: 평소 서비스 트래픽 기준선과 비교합니다.\n\n- **값이 없을 때 의미**: 트랜잭션이 없거나 PostgreSQL 메트릭 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: API 트래픽, Backend DB 호출, RDS PostgreSQL 로그를 확인합니다.",
       "datasource": {
         "uid": "prometheus"
       },
       "targets": [
         {
-          "expr": "sum(rate(pg_stat_database_xact_commit[5m]))",
+          "expr": "sum(rate(pg_stat_database_xact_commit{datname=\"fastapi_db\"}[5m]))",
           "legendFormat": "커밋"
         },
         {
-          "expr": "sum(rate(pg_stat_database_xact_rollback[5m]))",
+          "expr": "sum(rate(pg_stat_database_xact_rollback{datname=\"fastapi_db\"}[5m]))",
           "legendFormat": "롤백"
         }
       ],
@@ -116,13 +116,13 @@
     {
       "type": "timeseries",
       "title": "최근 1시간 교착 상태 발생 수",
-      "description": "- **무엇을 측정하는가**: 최근 1시간 PostgreSQL 교착 상태 발생 횟수입니다.\n\n- **정상 범위**: 0건입니다.\n\n- **값이 없을 때 의미**: 메트릭 수집이 중단됐을 수 있으므로 PostgreSQL 상태를 함께 확인합니다.\n\n- **문제가 생기면 어디를 확인하는가**: PostgreSQL 로그와 동시에 실행된 트랜잭션·잠금 쿼리를 확인합니다.",
+      "description": "- **무엇을 측정하는가**: 최근 1시간 fastapi_db에서 발생한 PostgreSQL 교착 상태 횟수입니다.\n\n- **정상 범위**: 0건입니다.\n\n- **값이 없을 때 의미**: 메트릭 수집이 중단됐을 수 있으므로 PostgreSQL 상태를 함께 확인합니다.\n\n- **문제가 생기면 어디를 확인하는가**: RDS PostgreSQL 로그와 동시에 실행된 트랜잭션·잠금 쿼리를 확인합니다.",
       "datasource": {
         "uid": "prometheus"
       },
       "targets": [
         {
-          "expr": "sum(increase(pg_stat_database_deadlocks[1h])) or vector(0)",
+          "expr": "sum(increase(pg_stat_database_deadlocks{datname=\"fastapi_db\"}[1h])) or vector(0)",
           "legendFormat": "교착 상태"
         }
       ],
@@ -136,7 +136,7 @@
     {
       "type": "timeseries",
       "title": "서비스 데이터베이스 저장 용량",
-      "description": "- **무엇을 측정하는가**: 시스템 DB를 제외한 서비스 데이터베이스의 저장 용량입니다.\n\n- **정상 범위**: 디스크 여유 공간 내에서 예상 증가율을 유지하는 상태입니다.\n\n- **값이 없을 때 의미**: 서비스 DB가 없거나 PostgreSQL 메트릭 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: 파일시스템 사용률, 대용량 테이블·인덱스, 보존 정책을 확인합니다.",
+      "description": "- **무엇을 측정하는가**: RDS의 SignalTrade 서비스 데이터베이스(fastapi_db)가 사용하는 저장 용량입니다.\n\n- **정상 범위**: 예상 증가율을 유지하며 RDS 여유 스토리지 안에 있는 상태입니다.\n\n- **값이 없을 때 의미**: 서비스 DB 또는 postgres-exporter 수집 상태를 확인해야 합니다.\n\n- **문제가 생기면 어디를 확인하는가**: RDS FreeStorageSpace, 대용량 테이블·인덱스, 데이터 보존 정책을 확인합니다.",
       "datasource": {
         "uid": "prometheus"
       },
@@ -147,13 +147,13 @@
       },
       "targets": [
         {
-          "expr": "pg_database_size_bytes{datname!~\"template0|template1|postgres\"}",
-          "legendFormat": "서비스 DB ({{datname}})"
+          "expr": "pg_database_size_bytes{datname=\"fastapi_db\"}",
+          "legendFormat": "fastapi_db"
         }
       ],
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 8,
         "x": 0,
         "y": 13
       }
@@ -161,7 +161,7 @@
     {
       "type": "timeseries",
       "title": "데이터베이스 캐시 적중률",
-      "description": "- **무엇을 측정하는가**: 데이터 블록을 디스크 대신 PostgreSQL 캐시에서 읽은 비율입니다.\n\n- **정상 범위**: 일반적으로 99% 이상을 목표로 하되 워크로드 특성과 비교합니다.\n\n- **값이 없을 때 의미**: 읽기 통계가 없거나 PostgreSQL 메트릭 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: 느린 쿼리, 인덱스, shared_buffers, 호스트 메모리를 확인합니다.",
+      "description": "- **무엇을 측정하는가**: fastapi_db가 데이터 블록을 디스크 대신 PostgreSQL 캐시에서 읽은 비율입니다.\n\n- **정상 범위**: 일반적으로 99% 이상을 목표로 하되 워크로드 특성과 비교합니다.\n\n- **값이 없을 때 의미**: 읽기 통계가 없거나 PostgreSQL 메트릭 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: 느린 쿼리, 인덱스, shared_buffers와 RDS 메모리 지표를 확인합니다.",
       "datasource": {
         "uid": "prometheus"
       },
@@ -174,21 +174,21 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(pg_stat_database_blks_hit[5m])) / clamp_min(sum(rate(pg_stat_database_blks_hit[5m]) + rate(pg_stat_database_blks_read[5m])), 0.001)",
+          "expr": "sum(rate(pg_stat_database_blks_hit{datname=\"fastapi_db\"}[5m])) / clamp_min(sum(rate(pg_stat_database_blks_hit{datname=\"fastapi_db\"}[5m]) + rate(pg_stat_database_blks_read{datname=\"fastapi_db\"}[5m])), 0.001)",
           "legendFormat": "캐시 적중률"
         }
       ],
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
+        "w": 8,
+        "x": 8,
         "y": 13
       }
     },
     {
       "type": "timeseries",
-      "title": "PostgreSQL Rollback Rate",
-      "description": "전체 트랜잭션 중 rollback 비율입니다. 지속 상승하면 애플리케이션 오류, lock 충돌, 트랜잭션 처리 실패를 확인합니다.",
+      "title": "트랜잭션 롤백 비율",
+      "description": "fastapi_db 전체 트랜잭션 중 롤백 비율입니다. 지속 상승하면 애플리케이션 오류, 잠금 충돌과 트랜잭션 처리 실패를 확인합니다.",
       "datasource": {
         "uid": "prometheus",
         "type": "prometheus"
@@ -201,15 +201,15 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(pg_stat_database_xact_rollback{datname!~\"template0|template1|postgres\"}[5m])) / clamp_min(sum(rate(pg_stat_database_xact_commit{datname!~\"template0|template1|postgres\"}[5m])) + sum(rate(pg_stat_database_xact_rollback{datname!~\"template0|template1|postgres\"}[5m])), 0.001) or vector(0)",
-          "legendFormat": "Rollback Rate"
+          "expr": "sum(rate(pg_stat_database_xact_rollback{datname=\"fastapi_db\"}[5m])) / clamp_min(sum(rate(pg_stat_database_xact_commit{datname=\"fastapi_db\"}[5m])) + sum(rate(pg_stat_database_xact_rollback{datname=\"fastapi_db\"}[5m])), 0.001) or vector(0)",
+          "legendFormat": "롤백 비율"
         }
       ],
       "gridPos": {
         "h": 8,
-        "w": 6,
-        "x": 18,
-        "y": 5
+        "w": 8,
+        "x": 16,
+        "y": 13
       }
     }
   ]

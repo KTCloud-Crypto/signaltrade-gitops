@@ -346,7 +346,7 @@
       },
       "targets": [
         {
-          "expr": "sum(pg_stat_activity_count{datname=\"signaltrade\",state=\"active\"}) or vector(0)",
+          "expr": "sum(pg_stat_activity_count{datname=\"fastapi_db\",state=\"active\"}) or vector(0)",
           "legendFormat": "활성 연결"
         }
       ],
