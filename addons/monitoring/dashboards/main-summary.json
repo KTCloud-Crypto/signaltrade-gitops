@@ -11,47 +11,26 @@
   ],
   "title": "SignalTrade 메인 요약",
   "uid": "signaltrade-main-summary",
-  "version": 1,
+  "version": 2,
   "refresh": "15s",
   "time": {
     "from": "now-6h",
     "to": "now"
   },
   "templating": {
-    "list": [
-      {
-        "name": "environment",
-        "label": "실행 환경",
-        "type": "query",
-        "datasource": {
-          "uid": "loki",
-          "type": "loki"
-        },
-        "query": {
-          "query": "label_values(environment)",
-          "refId": "LokiVariableQueryEditor-VariableQuery"
-        },
-        "includeAll": true,
-        "allValue": ".+",
-        "current": {
-          "text": "전체",
-          "value": "$__all"
-        },
-        "refresh": 1
-      }
-    ]
+    "list": []
   },
   "panels": [
     {
       "type": "stat",
       "title": "핵심 서비스 상태",
-      "description": "- **무엇을 측정하는가**: Backend·전략 Worker·PostgreSQL 메트릭 수집 상태를 하나로 종합합니다.\n\n- **정상 범위**: 정상입니다. 하나라도 중단되면 장애로 표시합니다.\n\n- **값이 없을 때 의미**: Prometheus가 핵심 서비스 대상을 찾지 못한 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: 서비스 개요와 데이터베이스 대시보드, Prometheus Targets를 확인합니다.",
+      "description": "- **무엇을 측정하는가**: Kubernetes가 기대하는 Backend 4종·Worker 5종의 전체 Replica 가용 상태와 PostgreSQL 연결 상태를 하나로 종합합니다.\n\n- **정상 범위**: 9개 Deployment의 기대 Replica가 모두 가용하고 PostgreSQL 연결이 정상인 상태입니다. 하나라도 부족하면 장애로 표시합니다.\n\n- **값이 없을 때 의미**: Prometheus 또는 kube-state-metrics 수집이 중단된 상태일 수 있습니다.\n\n- **문제가 생기면 어디를 확인하는가**: 서비스 개요, Kubernetes 클러스터, 데이터베이스 대시보드를 확인합니다.",
       "datasource": {
         "uid": "prometheus"
       },
       "targets": [
         {
-          "expr": "min(up{job=~\"identity-api|strategy-api|trading-api|portfolio-api|strategy-worker|trading-worker|portfolio-worker|notification-worker|messaging-worker\"} or pg_up)",
+          "expr": "(sum(max by (namespace, deployment) (kube_deployment_status_replicas_available{namespace=\"signaltrade-staging\",deployment=~\"identity-api|strategy-api|trading-api|portfolio-api|strategy-worker|trading-worker|portfolio-worker|notification-worker|messaging-worker\"}) >= bool on (namespace, deployment) max by (namespace, deployment) (kube_deployment_spec_replicas{namespace=\"signaltrade-staging\",deployment=~\"identity-api|strategy-api|trading-api|portfolio-api|strategy-worker|trading-worker|portfolio-worker|notification-worker|messaging-worker\"})) == bool 9) * (max(pg_up) == bool 1)",
           "instant": true,
           "range": false
         }
@@ -116,8 +95,8 @@
     },
     {
       "type": "stat",
-      "title": "Upbit 실시간 연결",
-      "description": "- **무엇을 측정하는가**: Upbit WebSocket 실시간 시세 연결 상태입니다.\n\n- **정상 범위**: 연결됨입니다.\n\n- **값이 없을 때 의미**: Worker 메트릭 수집 중단 또는 연결 계측 미시작 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: 운영 모니터링의 마지막 시세 수신 경과와 Worker 로그를 확인합니다.",
+      "title": "Strategy Worker · Upbit 실시간 연결",
+      "description": "- **무엇을 측정하는가**: Strategy Worker가 사용하는 Upbit WebSocket 실시간 시세 연결 상태입니다.\n\n- **정상 범위**: 연결됨입니다.\n\n- **값이 없을 때 의미**: Strategy Worker 메트릭 수집 중단 또는 연결 계측 미시작 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: 운영 모니터링의 가장 오래된 시세 수신 경과와 Strategy Worker 로그를 확인합니다.",
       "datasource": {
         "uid": "prometheus"
       },
@@ -185,7 +164,7 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(signaltrade_http_request_duration_seconds_bucket[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(signaltrade_http_request_duration_seconds_bucket{route!~\"/health|/ready|/metrics\"}[5m])))",
           "instant": true,
           "range": false
         }
@@ -288,7 +267,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(loki_write_dropped_entries_total[1h])) or vector(0)",
+          "expr": "sum(increase(loki_write_dropped_entries_total{job=\"alloy\"}[1h])) or vector(0)",
           "instant": true,
           "range": false
         }
@@ -331,13 +310,13 @@
     {
       "type": "timeseries",
       "title": "사용자 영향: 요청량·오류 추이",
-      "description": "- **무엇을 측정하는가**: 상태 코드별 API 초당 요청 수와 사용자에게 영향을 주는 오류 추이입니다.\n\n- **정상 범위**: 2xx가 대부분이고 5xx가 발생하지 않는 상태입니다.\n\n- **값이 없을 때 의미**: 요청이 없거나 Backend 메트릭 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: API 트래픽 대시보드의 상태 코드와 오류 로그를 확인합니다.",
+      "description": "- **무엇을 측정하는가**: 헬스체크·메트릭 수집 요청을 제외한 실제 사용자 API 요청을 상태 코드별로 표시합니다.\n\n- **정상 범위**: 2xx가 대부분이고 5xx가 발생하지 않는 상태입니다.\n\n- **값이 없을 때 의미**: 사용자 요청이 없거나 Backend 메트릭 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: API 트래픽 대시보드의 서비스·경로별 상태 코드와 오류 로그를 확인합니다.",
       "datasource": {
         "uid": "prometheus"
       },
       "targets": [
         {
-          "expr": "sum by (status) (rate(signaltrade_http_requests_total[5m]))",
+          "expr": "sum by (status) (rate(signaltrade_http_requests_total{route!~\"/health|/ready|/metrics\"}[5m]))",
           "legendFormat": "HTTP {{status}}"
         }
       ],
@@ -363,7 +342,7 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(signaltrade_http_request_duration_seconds_bucket[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(signaltrade_http_request_duration_seconds_bucket{route!~\"/health|/ready|/metrics\"}[5m])))",
           "legendFormat": "전체 API"
         },
         {
@@ -386,19 +365,19 @@
     },
     {
       "type": "timeseries",
-      "title": "호스트 CPU·메모리 사용률",
-      "description": "- **무엇을 측정하는가**: EC2 호스트의 CPU와 메모리 사용률입니다.\n\n- **정상 범위**: 두 값 모두 지속적으로 80% 미만인 상태입니다.\n\n- **값이 없을 때 의미**: node-exporter 또는 Prometheus 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: 운영 모니터링의 컨테이너 CPU·메모리 상위 10개를 확인합니다.",
+      "title": "Worker Node 최대 CPU·메모리 사용률",
+      "description": "- **무엇을 측정하는가**: Kubernetes Worker Node 가운데 가장 사용률이 높은 노드의 CPU와 메모리 사용률입니다.\n\n- **정상 범위**: 두 값 모두 지속적으로 80% 미만인 상태입니다.\n\n- **값이 없을 때 의미**: node-exporter 또는 Prometheus 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: Kubernetes 클러스터 대시보드에서 해당 Worker Node와 배치된 Pod를 확인합니다.",
       "datasource": {
         "uid": "prometheus"
       },
       "targets": [
         {
-          "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m]))",
-          "legendFormat": "CPU"
+          "expr": "max(1 - avg by (node) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])))",
+          "legendFormat": "최대 CPU"
         },
         {
-          "expr": "1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes",
-          "legendFormat": "메모리"
+          "expr": "max(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)",
+          "legendFormat": "최대 메모리"
         }
       ],
       "fieldConfig": {
@@ -469,13 +448,13 @@
     {
       "type": "logs",
       "title": "즉시 확인할 오류 로그",
-      "description": "- **무엇을 측정하는가**: 전체 서비스의 ERROR·CRITICAL 로그입니다.\n\n- **정상 범위**: 새로운 오류 로그가 없는 상태입니다.\n\n- **값이 없을 때 의미**: 오류가 없거나 Loki 로그 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: 서비스·logger·요청 ID를 기준으로 상세 대시보드와 컨테이너 로그를 확인합니다.",
+      "description": "- **무엇을 측정하는가**: 현재 MSA의 API·Worker Pod에서 발생한 명시적인 ERROR·CRITICAL 레벨과 Traceback·처리되지 않은 예외입니다.\n\n- **정상 범위**: 새로운 오류 로그가 없는 상태입니다.\n\n- **값이 없을 때 의미**: 오류가 없거나 Loki 로그 수집이 중단된 상태입니다.\n\n- **문제가 생기면 어디를 확인하는가**: Pod·요청 ID를 기준으로 운영 모니터링과 Kubernetes 컨테이너 로그를 확인합니다.",
       "datasource": {
         "uid": "loki"
       },
       "targets": [
         {
-          "expr": "{environment=~\"$environment\",level=~\"ERROR|CRITICAL\"} | json"
+          "expr": "{namespace=\"signaltrade-staging\",pod=~\"(identity|strategy|trading|portfolio)-api-.*|(strategy|trading|portfolio|notification|messaging)-worker-.*\"} |~ `(?i)(level[\\\"=: ]+(error|critical)|traceback|uncaught exception)` | json"
         }
       ],
       "options": {
