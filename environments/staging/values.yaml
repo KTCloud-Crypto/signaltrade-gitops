@@ -6,7 +6,7 @@ secret:
   databaseKey: signaltrade/staging/database
 # 서비스 CI가 검증된 immutable tag 또는 digest를 이곳에 반영합니다.
 apis:
-  identity: {tag: 1c78c6dec0c057790e298acc832f15377519e531, replicas: 2}
+  identity: {tag: 523eb769ccf0871b965bfe9a993a1e5844a44a1c, replicas: 2}
   strategy: {tag: 70e016760e367b6577aeb9daabc96d46a35911ca, replicas: 2}
   trading: {tag: 3afbbada2715ba471a8f75dd1d5baf694249bc1d, replicas: 2}
   portfolio: {tag: c9570797f00145fc1ddac859288cdbcaa57da8ce, replicas: 2}
