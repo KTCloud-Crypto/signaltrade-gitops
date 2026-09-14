@@ -9,12 +9,12 @@ apis:
   identity: {tag: 1c78c6dec0c057790e298acc832f15377519e531, replicas: 2}
   strategy: {tag: 70e016760e367b6577aeb9daabc96d46a35911ca, replicas: 2}
   trading: {tag: 3afbbada2715ba471a8f75dd1d5baf694249bc1d, replicas: 2}
-  portfolio: {tag: 2eefc585855c5505b31d19b2821d85ce1945c4b2, replicas: 2}
+  portfolio: {tag: c9570797f00145fc1ddac859288cdbcaa57da8ce, replicas: 2}
 workers:
   messaging: {tag: 90565dc022f81c1373e80ff8995dc333bc3847e6, replicas: 1}
   strategy: {tag: 70e016760e367b6577aeb9daabc96d46a35911ca, replicas: 1}
   trading: {tag: 3afbbada2715ba471a8f75dd1d5baf694249bc1d, replicas: 1}
-  portfolio: {tag: 2eefc585855c5505b31d19b2821d85ce1945c4b2, replicas: 1}
+  portfolio: {tag: c9570797f00145fc1ddac859288cdbcaa57da8ce, replicas: 1}
   notification: {tag: c2b0ee89402a4f4a196908ef3e03b123190c9a79, replicas: 1}
 migration: {tag: 7600af5f909e7ef7f4d622889444d0c3ad25606c}
 ingress: {enabled: true}
