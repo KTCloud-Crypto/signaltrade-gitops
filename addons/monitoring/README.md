@@ -12,7 +12,7 @@
 - 데이터 없음은 정상 0건으로 대체하지 않습니다. 사전 점검에서 API·Worker·postgres·kube-state-metrics·node-exporter 수집 상태를 확인하세요.
 - 노드 Pod 수는 전체 Namespace를 포함합니다. Pod 필터는 API 서비스와 독립적이므로 Worker도 선택할 수 있습니다.
 - Outbox 발행률, 알림 전송률, 계측된 Worker 작업 결과를 표시합니다. 이는 주문 완료율이 아닙니다. SQS 적체·최장 대기 시간, Outbox 대기량, Redis 상태, 업무 완료 지연은 별도 계측·수집 확인이 필요하며 이 대시보드만으로 완전한 회복을 판정하지 않습니다.
-- `signaltrade_db_pool_connections`는 API Pod별 SQLAlchemy 풀의 기본 크기(`size`), 사용 중(`checked_out`), 유휴(`checked_in`), 임시 초과 연결(`overflow`)을 표시합니다. `checked_out`이 `size`에 근접하고 `checked_in`이 0인 상태가 지속되는 서비스부터 DB 연결 병목을 점검합니다.
+- `signaltrade_db_pool_connections`는 API Pod별 SQLAlchemy 풀의 사용 중 연결(`checked_out`)과 최대 연결(`capacity`)을 제공합니다. 대시보드는 이를 사용률로 계산하며 70%부터 주의, 90%부터 포화로 표시하고 RDS 전체 연결 사용률과 함께 비교합니다.
 - `signaltrade_external_request_duration_seconds`와 `signaltrade_external_requests_total`로 서비스·작업별 Upbit p95, RPS, 결과와 오류율을 비교합니다. `http_429`는 호출 제한, `http_5xx`는 Upbit 응답 오류, `timeout`·`connection_error`는 NAT·DNS·인터넷을 포함한 외부 통신 구간을 우선 점검합니다.
 - 휴식 중 응답시간·오류·Pending·DB 연결·작업 상태를 관측하고 고정 RPS 마지막 20 RPS 구간을 첫 20 RPS 구간과 비교합니다. 단순히 대기 시간이 지났거나 HPA가 최소 복제 수로 줄었다는 이유만으로 회복 성공을 판정하지 않습니다.
 
