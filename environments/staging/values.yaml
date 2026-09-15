@@ -11,7 +11,7 @@ apis:
   trading: {tag: 761452e82771f815cc44adcdca36bf021cc9476e, replicas: 2}
   portfolio: {tag: e4bdb90cb89d49c7b809df403982c492ddcf79b2, replicas: 2}
 workers:
-  messaging: {tag: 90565dc022f81c1373e80ff8995dc333bc3847e6, replicas: 1}
+  messaging: {tag: 1bec73e8d68207893fe2674e001e3533a6480342, replicas: 1}
   strategy: {tag: 6b165624742d5ba1f733f86cc25f89a2bdd1e77d, replicas: 1}
   trading: {tag: 761452e82771f815cc44adcdca36bf021cc9476e, replicas: 1}
   portfolio: {tag: e4bdb90cb89d49c7b809df403982c492ddcf79b2, replicas: 1}
