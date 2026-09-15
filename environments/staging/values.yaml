@@ -7,12 +7,12 @@ secret:
 # 서비스 CI가 검증된 immutable tag 또는 digest를 이곳에 반영합니다.
 apis:
   identity: {tag: 0ea3f8fbf493d0f6c88c8217aa58fbc54d3c602d, replicas: 2}
-  strategy: {tag: 70e016760e367b6577aeb9daabc96d46a35911ca, replicas: 2}
+  strategy: {tag: 98e1762b430ef4fbe3ccc397baa000f638005d0c, replicas: 2}
   trading: {tag: 0bbfdf5c7fbdf3f66df7d6844c2955ff24e1697e, replicas: 2}
   portfolio: {tag: c9570797f00145fc1ddac859288cdbcaa57da8ce, replicas: 2}
 workers:
   messaging: {tag: 90565dc022f81c1373e80ff8995dc333bc3847e6, replicas: 1}
-  strategy: {tag: 70e016760e367b6577aeb9daabc96d46a35911ca, replicas: 1}
+  strategy: {tag: 98e1762b430ef4fbe3ccc397baa000f638005d0c, replicas: 1}
   trading: {tag: 0bbfdf5c7fbdf3f66df7d6844c2955ff24e1697e, replicas: 1}
   portfolio: {tag: c9570797f00145fc1ddac859288cdbcaa57da8ce, replicas: 1}
   notification: {tag: c2b0ee89402a4f4a196908ef3e03b123190c9a79, replicas: 1}
