@@ -131,10 +131,10 @@
     },
     {
       "type": "bargauge",
-      "title": "인증·권한 오류 IP 상위 10개",
-      "description": "CloudFront에서 관측한 401 또는 403 응답의 실제 Viewer IP입니다. 로그인 실패뿐 아니라 만료된 인증과 권한 탐색 요청도 포함됩니다.",
+      "title": "서비스·외부 경로 인증 오류 IP 상위 10개",
+      "description": "선택한 시간 범위의 CloudFront 401·403 응답 건수입니다. /monitoring 및 하위 경로는 별도 모니터링 인증 패널로 분리합니다. 서비스 API 외 의심 경로의 접근 거부는 유지하며, 건수만으로 공격이라고 판단하지 않습니다.",
       "datasource": {"uid": "loki", "type": "loki"},
-      "targets": [{"expr": "topk(10, sum by (client_ip) (count_over_time({service=\"edge-cloudfront\",source=\"cloudfront\",log_type=\"security_access\",environment=~\"$environment\"} | json | status_code=~\"401|403\" | client_ip!=\"\" | client_ip=~\"$client_ip\" [$__range])))", "instant": true, "legendFormat": "{{client_ip}}", "refId": "A"}],
+      "targets": [{"expr": "topk(10, sum by (client_ip) (count_over_time({service=\"edge-cloudfront\",source=\"cloudfront\",log_type=\"security_access\",environment=~\"$environment\"} | json | __error__=\"\" | status_code=~\"401|403\" | path!=\"\" | path!~\"/monitoring(/.*)?\" | client_ip!=\"\" | client_ip=~\"$client_ip\" [$__range])))", "instant": true, "legendFormat": "{{client_ip}}", "refId": "A"}],
       "fieldConfig": {"defaults": {"min": 0, "unit": "short", "color": {"mode": "continuous-GrYlRd"}}},
       "options": {"displayMode": "gradient", "orientation": "horizontal", "showUnfilled": true, "valueMode": "color", "namePlacement": "left", "valuePlacement": "right"},
       "gridPos": {"x": 16, "y": 13, "w": 8, "h": 8}
@@ -150,21 +150,40 @@
     },
     {
       "type": "logs",
-      "title": "최근 인증·권한 오류",
-      "description": "401·403 응답의 원천 IP, 요청 경로, User-Agent와 요청 ID를 확인합니다.",
+      "title": "최근 서비스·외부 경로 인증·권한 오류",
+      "description": "CloudFront 401·403 응답 중 /monitoring 경로를 제외합니다. 서비스 인증 실패와 스캔 경로 접근 거부를 경로별로 구분하세요. Grafana 인증 실패는 아래 별도 패널에서 확인합니다.",
       "datasource": {"uid": "loki", "type": "loki"},
-      "targets": [{"expr": "{service=\"edge-cloudfront\",source=\"cloudfront\",log_type=\"security_access\",environment=~\"$environment\"} | json | status_code=~\"401|403\" | client_ip=~\"$client_ip\" | request_id=~\"$request_id\" | line_format \"IP={{.client_ip}} status={{.status_code}} {{.method}} {{.path}} user_agent={{.user_agent}} request_id={{.request_id}}\"", "queryType": "range", "refId": "A"}],
+      "targets": [{"expr": "{service=\"edge-cloudfront\",source=\"cloudfront\",log_type=\"security_access\",environment=~\"$environment\"} | json | __error__=\"\" | status_code=~\"401|403\" | path!=\"\" | path!~\"/monitoring(/.*)?\" | client_ip=~\"$client_ip\" | request_id=~\"$request_id\" | line_format \"IP={{.client_ip}} status={{.status_code}} {{.method}} {{.path}} user_agent={{.user_agent}} request_id={{.request_id}}\"", "queryType": "range", "refId": "A"}],
       "options": {"showTime": true, "showLabels": false, "showCommonLabels": false, "wrapLogMessage": true, "prettifyLogMessage": false, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"},
       "gridPos": {"x": 12, "y": 21, "w": 12, "h": 10}
     },
     {
       "type": "logs",
       "title": "최근 HTTP 오류 접근 로그",
-      "description": "CloudFront의 4xx·5xx 응답을 시간순으로 보여줍니다. 실제 Viewer IP·경로·상태 코드를 이용해 탐색이나 장애를 구분합니다.",
+      "description": "CloudFront의 모든 경로에 대한 4xx·5xx 응답입니다. /monitoring 오류도 원문 확인을 위해 유지합니다. 서비스 인증 오류 건수와는 범위가 다르며 실제 Viewer IP·경로·상태 코드로 탐색과 장애를 구분하세요.",
       "datasource": {"uid": "loki", "type": "loki"},
       "targets": [{"expr": "{service=\"edge-cloudfront\",source=\"cloudfront\",log_type=\"security_access\",environment=~\"$environment\"} | json | status_code=~\"4..|5..\" | client_ip=~\"$client_ip\" | request_id=~\"$request_id\" | line_format \"IP={{.client_ip}} status={{.status_code}} {{.method}} {{.path}} result={{.result_type}} request_id={{.request_id}}\"", "queryType": "range", "refId": "A"}],
       "options": {"showTime": true, "showLabels": false, "showCommonLabels": false, "wrapLogMessage": true, "prettifyLogMessage": false, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"},
       "gridPos": {"x": 0, "y": 31, "w": 24, "h": 11}
+    },
+    {
+      "type": "bargauge",
+      "title": "모니터링 인증 오류 IP 상위 10개",
+      "description": "선택한 시간 범위의 /monitoring 경로 401·403 응답 건수입니다. Grafana Live 연결의 세션 만료·쿠키 전달 문제로 반복될 수 있으며 공격이라고 단정하지 않습니다. 시간 범위 밖으로 이전 요청이 빠지면 건수가 감소합니다.",
+      "datasource": {"uid": "loki", "type": "loki"},
+      "targets": [{"expr": "topk(10, sum by (client_ip) (count_over_time({service=\"edge-cloudfront\",source=\"cloudfront\",log_type=\"security_access\",environment=~\"$environment\"} | json | __error__=\"\" | status_code=~\"401|403\" | path=~\"/monitoring(/.*)?\" | client_ip!=\"\" | client_ip=~\"$client_ip\" [$__range])))", "instant": true, "legendFormat": "{{client_ip}}", "refId": "A"}],
+      "fieldConfig": {"defaults": {"min": 0, "unit": "short", "decimals": 0, "color": {"mode": "fixed", "fixedColor": "blue"}}},
+      "options": {"displayMode": "gradient", "orientation": "horizontal", "showUnfilled": true, "valueMode": "color", "namePlacement": "left", "valuePlacement": "right"},
+      "gridPos": {"x": 0, "y": 42, "w": 8, "h": 10}
+    },
+    {
+      "type": "logs",
+      "title": "최근 모니터링 인증·권한 오류",
+      "description": "CloudFront에서 관측한 /monitoring 경로의 401·403입니다. /monitoring/api/live/ws 반복 실패는 Grafana 로그인 세션과 WebSocket 프록시 설정을 점검하세요. 이 패널은 인증 실패를 분리 표시할 뿐 연결 문제 자체를 해결하지는 않습니다.",
+      "datasource": {"uid": "loki", "type": "loki"},
+      "targets": [{"expr": "{service=\"edge-cloudfront\",source=\"cloudfront\",log_type=\"security_access\",environment=~\"$environment\"} | json | __error__=\"\" | status_code=~\"401|403\" | path=~\"/monitoring(/.*)?\" | client_ip=~\"$client_ip\" | request_id=~\"$request_id\" | line_format \"IP={{.client_ip}} status={{.status_code}} {{.method}} {{.path}} user_agent={{.user_agent}} request_id={{.request_id}}\"", "queryType": "range", "refId": "A"}],
+      "options": {"showTime": true, "showLabels": false, "showCommonLabels": false, "wrapLogMessage": true, "prettifyLogMessage": false, "enableLogDetails": true, "sortOrder": "Descending", "dedupStrategy": "none"},
+      "gridPos": {"x": 8, "y": 42, "w": 16, "h": 10}
     }
   ]
 }
