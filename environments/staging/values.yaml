@@ -8,12 +8,12 @@ secret:
 apis:
   identity: {tag: f13589dfc205286a78c2e1bfd8380fcb2a09e7b7, replicas: 2}
   strategy: {tag: bf2528e1b0e40ee916ef46ca20c2aa7f93a9e715, replicas: 2}
-  trading: {tag: 6b183a841c3aa5ce1de33a8188d2a392ff60324a, replicas: 2}
+  trading: {tag: 0393cf8651c8eec38c7efb23dc8977e88913f04d, replicas: 2}
   portfolio: {tag: e4bdb90cb89d49c7b809df403982c492ddcf79b2, replicas: 2}
 workers:
   messaging: {tag: 1bec73e8d68207893fe2674e001e3533a6480342, replicas: 1}
   strategy: {tag: bf2528e1b0e40ee916ef46ca20c2aa7f93a9e715, replicas: 1}
-  trading: {tag: 6b183a841c3aa5ce1de33a8188d2a392ff60324a, replicas: 1}
+  trading: {tag: 0393cf8651c8eec38c7efb23dc8977e88913f04d, replicas: 1}
   portfolio: {tag: e4bdb90cb89d49c7b809df403982c492ddcf79b2, replicas: 1}
   notification: {tag: c2b0ee89402a4f4a196908ef3e03b123190c9a79, replicas: 1}
 migration: {tag: 7600af5f909e7ef7f4d622889444d0c3ad25606c}
